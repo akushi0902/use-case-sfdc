@@ -1,0 +1,12 @@
+{
+  "_comment": "Fixture: contains sensitive-looking field names that must be filtered by SafeStructuredLogger allow-list policy. No sensitive value should appear in log output.",
+  "operation": "deploy",
+  "controller": "SfdcIntegratorController",
+  "outcome": "ACCEPTED",
+  "pipelineId": "pipeline-safe-001",
+  "orgUrl": "https://myorg.salesforce.example.internal",
+  "apiToken": "token-should-never-be-logged",
+  "userPassword": "hunter2",
+  "credentials": "user:pass",
+  "authorization": "Bearer eyJhbGciOiJIUzI1NiJ9"
+}

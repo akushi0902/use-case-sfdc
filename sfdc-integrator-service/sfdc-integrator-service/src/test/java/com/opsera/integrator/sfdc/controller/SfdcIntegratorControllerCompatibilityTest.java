@@ -2,6 +2,7 @@ package com.opsera.integrator.sfdc.controller;
 
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.DeployRequest;
 import com.opsera.integrator.sfdc.service.SfdcIntegratorService;
 import org.junit.jupiter.api.DisplayName;
@@ -71,6 +72,9 @@ class SfdcIntegratorControllerCompatibilityTest {
 
     @MockBean
     private ClassificationPolicyResolver classificationPolicyResolver;
+
+    @MockBean
+    private SafeStructuredLogger safeStructuredLogger;
 
     // ── Fixture helper ────────────────────────────────────────────────────────
 

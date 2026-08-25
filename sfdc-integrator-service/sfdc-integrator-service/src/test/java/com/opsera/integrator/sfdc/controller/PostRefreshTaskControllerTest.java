@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationContext;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.governance.classification.DataClassification;
 import com.opsera.integrator.sfdc.governance.classification.GovernanceDataCategory;
 import com.opsera.integrator.sfdc.governance.classification.RetentionCategoryHint;
@@ -43,6 +44,9 @@ class PostRefreshTaskControllerTest {
 
     @MockBean
     private ClassificationPolicyResolver classificationPolicyResolver;
+
+    @MockBean
+    private SafeStructuredLogger safeStructuredLogger;
 
     @Test
     void postRefresh_validRequest_returns200Success() throws Exception {

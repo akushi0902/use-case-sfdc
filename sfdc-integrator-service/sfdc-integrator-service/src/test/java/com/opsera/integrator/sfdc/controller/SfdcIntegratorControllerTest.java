@@ -3,6 +3,7 @@ package com.opsera.integrator.sfdc.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.DeployRequest;
 import com.opsera.integrator.sfdc.service.SfdcIntegratorService;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,9 @@ class SfdcIntegratorControllerTest {
 
     @MockBean
     private ClassificationPolicyResolver classificationPolicyResolver;
+
+    @MockBean
+    private SafeStructuredLogger safeStructuredLogger;
 
     // ---- LEGACY-003: POST /deploy ----
 

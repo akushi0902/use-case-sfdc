@@ -9,6 +9,7 @@ import com.opsera.integrator.sfdc.service.QuickDeployService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -47,6 +48,9 @@ class JobExecutionControllerTest {
 
     @MockBean
     private ClassificationPolicyResolver classificationPolicyResolver;
+
+    @MockBean
+    private SafeStructuredLogger safeStructuredLogger;
 
     // ---- LEGACY-001: POST /quickdeploy — start ----
 

@@ -1,14 +1,13 @@
 package com.opsera.integrator.sfdc.controller;
 
-import com.opsera.integrator.sfdc.governance.classification.ClassificationContext;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
 import com.opsera.integrator.sfdc.governance.classification.GovernanceDataCategory;
+import com.opsera.integrator.sfdc.logging.SafeLogEvent;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
 import jakarta.validation.Valid;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,22 +30,26 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>Input validation on {@code startQuickDeploy} is enforced via Jakarta Bean Validation
  * ({@code @Valid}); invalid requests throw {@code MethodArgumentNotValidException} which
  * is mapped to a structured 400 response by {@code SfdcExceptionHandler}.
+ *
+ * <p>Operational logging uses {@link SafeStructuredLogger} — raw request bodies and DTO
+ * toString output are never emitted to logs.
  */
 @RestController
 @RequestMapping("/quickdeploy")
 public class JobExecutionController {
 
-    private static final Logger log = LoggerFactory.getLogger(JobExecutionController.class);
-
     static final String SUCCESS = "SUCCESS";
 
     private final QuickDeployService quickDeployService;
     private final ClassificationPolicyResolver classificationResolver;
+    private final SafeStructuredLogger safeLogger;
 
     public JobExecutionController(QuickDeployService quickDeployService,
-                                   ClassificationPolicyResolver classificationResolver) {
+                                   ClassificationPolicyResolver classificationResolver,
+                                   SafeStructuredLogger safeLogger) {
         this.quickDeployService = quickDeployService;
         this.classificationResolver = classificationResolver;
+        this.safeLogger = safeLogger;
     }
 
     /**
@@ -58,12 +61,15 @@ public class JobExecutionController {
      */
     @PostMapping
     public ResponseEntity<String> startQuickDeploy(@Valid @RequestBody QuickDeployRequest request) {
-        ClassificationContext ctx = classificationResolver.resolve(
-                GovernanceDataCategory.JOB_METADATA, "quick-deploy-start");
-        if (ctx != null) {
-            log.debug("Quick deploy start received: operation={}, classification={}",
-                    ctx.getOperationName(), ctx.getClassification());
-        }
+        classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-start");
+
+        safeLogger.logEvent(SafeLogEvent.builder()
+                .operation("quick-deploy-start")
+                .controller("JobExecutionController")
+                .outcome(SafeLogEvent.Outcome.ACCEPTED)
+                .safeField("pipelineId", request.getPipelineId())
+                .safeField("stepId", request.getStepId())
+                .build());
 
         // Normalize optional fallback field so downstream code never sees null
         if (request.getFallbackTaskId() == null) {
@@ -79,12 +85,15 @@ public class JobExecutionController {
      */
     @PostMapping("/stop")
     public ResponseEntity<String> stopQuickDeploy(@RequestBody QuickDeployStopRequest request) {
-        ClassificationContext ctx = classificationResolver.resolve(
-                GovernanceDataCategory.JOB_METADATA, "quick-deploy-stop");
-        if (ctx != null) {
-            log.debug("Quick deploy stop received: operation={}, classification={}",
-                    ctx.getOperationName(), ctx.getClassification());
-        }
+        classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-stop");
+
+        safeLogger.logEvent(SafeLogEvent.builder()
+                .operation("quick-deploy-stop")
+                .controller("JobExecutionController")
+                .outcome(SafeLogEvent.Outcome.ACCEPTED)
+                .safeField("pipelineId", request.getPipelineId())
+                .build());
+
         quickDeployService.stop(request);
         return ResponseEntity.ok(SUCCESS);
     }
