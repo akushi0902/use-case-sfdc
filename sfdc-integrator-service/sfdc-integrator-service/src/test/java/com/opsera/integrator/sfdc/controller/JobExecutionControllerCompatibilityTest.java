@@ -86,6 +86,12 @@ class JobExecutionControllerCompatibilityTest {
     @MockBean
     private ShellArgumentValidator shellArgumentValidator;
 
+    @MockBean
+    private com.opsera.integrator.sfdc.security.CallerContextResolver callerContextResolver;
+
+    @MockBean
+    private com.opsera.integrator.sfdc.security.ScopeAuthorizer scopeAuthorizer;
+
     // ── Fixture helpers ──────────────────────────────────────────────────────
 
     private String fixture(String name) throws Exception {

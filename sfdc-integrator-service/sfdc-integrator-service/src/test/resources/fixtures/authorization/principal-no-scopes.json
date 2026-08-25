@@ -1,0 +1,8 @@
+{
+  "_comment": "Synthetic JWT claims fixture for a principal with no scope claims — used in authorization denial tests",
+  "sub": "fixture-subject-001",
+  "client_id": "fixture-client-001",
+  "iss": "https://idp.fixture.example.internal/",
+  "aud": ["sfdc-integrator"],
+  "scope": ""
+}

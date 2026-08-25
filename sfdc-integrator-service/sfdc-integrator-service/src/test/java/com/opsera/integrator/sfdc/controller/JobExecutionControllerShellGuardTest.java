@@ -61,6 +61,12 @@ class JobExecutionControllerShellGuardTest {
     @MockBean
     private AuditEventWriter auditEventWriter;
 
+    @MockBean
+    private com.opsera.integrator.sfdc.security.CallerContextResolver callerContextResolver;
+
+    @MockBean
+    private com.opsera.integrator.sfdc.security.ScopeAuthorizer scopeAuthorizer;
+
     // ---- Valid request passes shell guard ----
 
     @Test

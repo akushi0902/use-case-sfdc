@@ -2,6 +2,7 @@ package com.opsera.integrator.sfdc.exceptions;
 
 import com.opsera.integrator.sfdc.correlation.CorrelationIdConstants;
 import com.opsera.integrator.sfdc.security.ShellArgumentViolationException;
+import com.opsera.integrator.sfdc.exceptions.ScopeAuthorizationException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +106,24 @@ public class SfdcExceptionHandler {
                 + ": " + ex.getRejectionCategory()));
 
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(ScopeAuthorizationException.class)
+    public ResponseEntity<ErrorResponse> handleScopeAuthorization(ScopeAuthorizationException ex) {
+        // Use the correlation ID from the exception (extracted from CallerContext) rather
+        // than MDC so the 403 is traceable even when the filter chain has already cleared MDC.
+        String correlationId = ex.getCorrelationId() != null ? ex.getCorrelationId() : getCorrelationId();
+        log.warn("Authorization denied: correlationId={}, requiredCapability={}, reason={}, actorRef={}",
+                correlationId, ex.getRequiredCapability(), ex.getDenialReason(), ex.getSafeActorRef());
+
+        ErrorResponse response = new ErrorResponse(
+                correlationId,
+                "INSUFFICIENT_SCOPE",
+                "Caller does not have the required capability for this operation",
+                "Contact your administrator to request the required service scope: "
+                        + ex.getRequiredCapability());
+        response.setRequiredCapability(ex.getRequiredCapability());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
     @ExceptionHandler(V2UnsupportedOperationException.class)

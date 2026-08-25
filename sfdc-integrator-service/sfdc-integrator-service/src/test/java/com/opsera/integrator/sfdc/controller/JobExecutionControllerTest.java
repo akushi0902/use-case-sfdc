@@ -62,6 +62,12 @@ class JobExecutionControllerTest {
     @MockBean
     private ShellArgumentValidator shellArgumentValidator;
 
+    @MockBean
+    private com.opsera.integrator.sfdc.security.CallerContextResolver callerContextResolver;
+
+    @MockBean
+    private com.opsera.integrator.sfdc.security.ScopeAuthorizer scopeAuthorizer;
+
     // ---- LEGACY-001: POST /quickdeploy — start ----
 
     @Test

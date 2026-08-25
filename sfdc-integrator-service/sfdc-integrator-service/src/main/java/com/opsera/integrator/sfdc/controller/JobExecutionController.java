@@ -11,11 +11,15 @@ import com.opsera.integrator.sfdc.logging.SafeLogEvent;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
+import com.opsera.integrator.sfdc.security.CallerContextResolver;
+import com.opsera.integrator.sfdc.security.ScopeAuthorizer;
+import com.opsera.integrator.sfdc.security.ScopeConstants;
 import com.opsera.integrator.sfdc.security.ShellArgumentProfile;
 import com.opsera.integrator.sfdc.security.ShellArgumentValidator;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,17 +52,23 @@ public class JobExecutionController {
     private final SafeStructuredLogger safeLogger;
     private final AuditEventWriter auditWriter;
     private final ShellArgumentValidator shellArgumentValidator;
+    private final CallerContextResolver callerContextResolver;
+    private final ScopeAuthorizer scopeAuthorizer;
 
     public JobExecutionController(QuickDeployService quickDeployService,
                                    ClassificationPolicyResolver classificationResolver,
                                    SafeStructuredLogger safeLogger,
                                    AuditEventWriter auditWriter,
-                                   ShellArgumentValidator shellArgumentValidator) {
+                                   ShellArgumentValidator shellArgumentValidator,
+                                   CallerContextResolver callerContextResolver,
+                                   ScopeAuthorizer scopeAuthorizer) {
         this.quickDeployService = quickDeployService;
         this.classificationResolver = classificationResolver;
         this.safeLogger = safeLogger;
         this.auditWriter = auditWriter;
         this.shellArgumentValidator = shellArgumentValidator;
+        this.callerContextResolver = callerContextResolver;
+        this.scopeAuthorizer = scopeAuthorizer;
     }
 
     /**
@@ -68,7 +78,13 @@ public class JobExecutionController {
      * (pipelineId, stepId only). Audit write failures propagate to the exception handler.
      */
     @PostMapping
-    public ResponseEntity<String> startQuickDeploy(@Valid @RequestBody QuickDeployRequest request) {
+    public ResponseEntity<String> startQuickDeploy(@Valid @RequestBody QuickDeployRequest request,
+                                                    Authentication authentication) {
+        scopeAuthorizer.requireScope(
+                callerContextResolver.resolve(authentication),
+                ScopeConstants.QUICK_DEPLOY_SUBMIT,
+                "quick-deploy-start");
+
         classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-start");
 
         // Shell argument safety: validate all fields that may reach script execution before
@@ -121,7 +137,13 @@ public class JobExecutionController {
      * (pipelineId only). Audit write failures propagate to the exception handler.
      */
     @PostMapping("/stop")
-    public ResponseEntity<String> stopQuickDeploy(@RequestBody QuickDeployStopRequest request) {
+    public ResponseEntity<String> stopQuickDeploy(@RequestBody QuickDeployStopRequest request,
+                                                   Authentication authentication) {
+        scopeAuthorizer.requireScope(
+                callerContextResolver.resolve(authentication),
+                ScopeConstants.QUICK_DEPLOY_CANCEL,
+                "quick-deploy-stop");
+
         classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-stop");
 
         // Shell argument safety: validate shell-bound fields before service delegation.

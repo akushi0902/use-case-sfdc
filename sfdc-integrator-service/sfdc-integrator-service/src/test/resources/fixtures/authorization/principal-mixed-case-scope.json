@@ -1,0 +1,8 @@
+{
+  "_comment": "Synthetic JWT claims fixture for a principal with mixed-case scope — must not match due to CallerContext normalization (lowercased)",
+  "sub": "fixture-subject-005",
+  "client_id": "fixture-client-005",
+  "iss": "https://idp.fixture.example.internal/",
+  "aud": ["sfdc-integrator"],
+  "scope": "QuickDeploy.Submit"
+}

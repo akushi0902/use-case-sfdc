@@ -61,6 +61,12 @@ class JobExecutionControllerSafeLoggingTest {
     @MockBean
     private ShellArgumentValidator shellArgumentValidator;
 
+    @MockBean
+    private com.opsera.integrator.sfdc.security.CallerContextResolver callerContextResolver;
+
+    @MockBean
+    private com.opsera.integrator.sfdc.security.ScopeAuthorizer scopeAuthorizer;
+
     // ── quick deploy start ────────────────────────────────────────────────────
 
     @Test

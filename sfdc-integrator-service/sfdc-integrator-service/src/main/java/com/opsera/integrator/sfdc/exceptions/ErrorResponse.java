@@ -19,6 +19,7 @@ public class ErrorResponse {
     private String message;
     private String remediation;
     private String timestamp;
+    private String requiredCapability;
     private List<SafeFieldError> fieldErrors;
 
     public ErrorResponse() {
@@ -52,6 +53,9 @@ public class ErrorResponse {
 
     public String getTimestamp() { return timestamp; }
     public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
+
+    public String getRequiredCapability() { return requiredCapability; }
+    public void setRequiredCapability(String requiredCapability) { this.requiredCapability = requiredCapability; }
 
     public List<SafeFieldError> getFieldErrors() {
         return Collections.unmodifiableList(fieldErrors);

@@ -63,6 +63,12 @@ class JobExecutionControllerBoundaryTest {
     @MockBean
     private ShellArgumentValidator shellArgumentValidator;
 
+    @MockBean
+    private com.opsera.integrator.sfdc.security.CallerContextResolver callerContextResolver;
+
+    @MockBean
+    private com.opsera.integrator.sfdc.security.ScopeAuthorizer scopeAuthorizer;
+
     private String fixture(String name) throws Exception {
         return new ClassPathResource("fixtures/boundary-errors/" + name)
                 .getContentAsString(StandardCharsets.UTF_8);
