@@ -1,0 +1,9 @@
+{
+  "_comment": "JWT claims map with no sub claim. CallerContextResolver must handle gracefully: hasSubject() returns false, getSubject() returns null, authenticationType is still JWT.",
+  "client_id": "sfdc-test-client-002",
+  "scope": "read",
+  "iss": "https://idp.example.internal",
+  "aud": ["sfdc-integrator"],
+  "exp": 9999999999,
+  "iat": 1700000000
+}

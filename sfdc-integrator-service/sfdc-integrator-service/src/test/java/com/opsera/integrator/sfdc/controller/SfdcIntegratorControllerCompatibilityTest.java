@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * Characterization compatibility tests for the legacy integrator controller surface
@@ -59,6 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p><strong>Runtime requirements:</strong> No Salesforce, Kafka, Hazelcast, Kubernetes,
  * Git, S3, or shell execution dependency. All collaborators are mocked.
  */
+@WithMockUser
 @WebMvcTest(controllers = SfdcIntegratorController.class)
 @Import(SfdcExceptionHandler.class)
 @DisplayName("SfdcIntegratorController — Legacy Integrator Compatibility")

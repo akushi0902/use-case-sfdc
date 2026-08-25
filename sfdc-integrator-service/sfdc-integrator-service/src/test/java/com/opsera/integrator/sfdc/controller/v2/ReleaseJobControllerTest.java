@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * MockMvc integration tests for {@link ReleaseJobController}.
@@ -36,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * behavior, and legacy route coexistence (characterized separately in
  * {@code JobExecutionControllerCompatibilityTest}).
  */
+@WithMockUser
 @WebMvcTest(controllers = ReleaseJobController.class)
 @Import(SfdcExceptionHandler.class)
 class ReleaseJobControllerTest {

@@ -19,12 +19,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * Verifies that disabling {@code sfdc.v2.release.routes.enabled} returns HTTP 404
  * without delegating to the facade, so operators can perform canary rollback of
  * v2 routes without affecting legacy endpoint availability.
  */
+@WithMockUser
 @WebMvcTest(controllers = ReleaseJobController.class)
 @Import(SfdcExceptionHandler.class)
 @TestPropertySource(properties = "sfdc.v2.release.routes.enabled=false")

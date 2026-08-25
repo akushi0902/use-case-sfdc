@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * Characterization tests for {@link SfdcIntegratorController} legacy deployment and
@@ -31,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>See: {@code src/test/resources/fixtures/contracts/legacy-release/legacy-contract-inventory.json}
  * for the machine-readable contract record (LEGACY-003, LEGACY-004).
  */
+@WithMockUser
 @WebMvcTest(controllers = SfdcIntegratorController.class)
 @Import(SfdcExceptionHandler.class)
 class SfdcIntegratorControllerTest {

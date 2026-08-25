@@ -125,9 +125,15 @@ dependencies {
     implementation 'com.opsera:kubernetes-client:1.0.0'
     implementation 'com.opsera.salesforce:salesforce-core-lib:1.0.0'
 
+    // Spring Security — OAuth2 resource server for JWT bearer token authentication
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
+    // Spring Security test support — provides @WithMockUser, jwt() MockMvc post-processor, etc.
+    testImplementation 'org.springframework.security:spring-security-test'
     // H2 in-memory database for isolated test datasource (PostgreSQL compatibility mode)
     testRuntimeOnly 'com.h2database:h2'
 }

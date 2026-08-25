@@ -24,6 +24,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * MVC integration tests verifying that {@link JobExecutionController} emits
@@ -33,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * tests can inspect the {@link SafeLogEvent} handed to the logger without needing
  * a log-capture appender.
  */
+@WithMockUser
 @WebMvcTest(controllers = JobExecutionController.class)
 @Import(SfdcExceptionHandler.class)
 @DisplayName("JobExecutionController — Safe Logging (WO-115)")

@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * Spring MVC boundary tests for {@link JobExecutionController} validating the
@@ -35,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>Fixtures are under {@code src/test/resources/fixtures/boundary-errors/}.
  * All identifiers are synthetic — no real credentials, org IDs, or tokens.
  */
+@WithMockUser
 @WebMvcTest(controllers = JobExecutionController.class)
 @Import(SfdcExceptionHandler.class)
 @DisplayName("JobExecutionController — Boundary Validation (WO-114)")

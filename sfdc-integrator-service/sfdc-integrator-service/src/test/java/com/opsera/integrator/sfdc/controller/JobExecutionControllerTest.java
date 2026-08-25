@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * Characterization tests for {@link JobExecutionController} legacy quick deploy routes.
@@ -35,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>See: {@code src/test/resources/fixtures/contracts/legacy-release/legacy-contract-inventory.json}
  * for the machine-readable contract record (LEGACY-001, LEGACY-002).
  */
+@WithMockUser
 @WebMvcTest(controllers = JobExecutionController.class)
 @Import(SfdcExceptionHandler.class)
 class JobExecutionControllerTest {

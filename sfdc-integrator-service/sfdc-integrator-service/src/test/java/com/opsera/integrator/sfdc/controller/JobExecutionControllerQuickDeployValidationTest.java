@@ -30,6 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * Spring MVC validation tests for the {@code POST /quickdeploy} boundary (WO-121).
@@ -57,6 +58,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *       the actual DTO uses {@code fallbackTaskId} for the equivalent canonicalization.</li>
  * </ul>
  */
+@WithMockUser
 @WebMvcTest(controllers = JobExecutionController.class)
 @Import(SfdcExceptionHandler.class)
 @DisplayName("JobExecutionController — Quick Deploy Request Validation (WO-121)")

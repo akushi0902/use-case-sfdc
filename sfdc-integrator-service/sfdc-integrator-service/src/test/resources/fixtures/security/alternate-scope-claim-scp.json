@@ -1,0 +1,10 @@
+{
+  "_comment": "JWT claims map using the scp array claim instead of the scope string claim. Tests scope normalization via the scp fallback path in CallerContextResolver.resolveScopes().",
+  "sub": "test-caller-subject-004",
+  "client_id": "sfdc-test-client-004",
+  "scp": ["quick-deploy", "read"],
+  "iss": "https://idp.example.internal",
+  "aud": ["sfdc-integrator"],
+  "exp": 9999999999,
+  "iat": 1700000000
+}

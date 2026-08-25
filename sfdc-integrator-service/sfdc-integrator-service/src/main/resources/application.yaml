@@ -1,4 +1,14 @@
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Production: set OAUTH2_JWK_SET_URI (preferred — no startup HTTP call) or
+          # OAUTH2_ISSUER_URI (triggers OIDC discovery at startup).
+          # Do NOT commit real endpoints or signing keys here.
+          jwk-set-uri: ${OAUTH2_JWK_SET_URI:}
+          issuer-uri: ${OAUTH2_ISSUER_URI:}
+
   datasource:
     # Production datasource: all values from environment variables.
     # Missing variables cause a clear startup failure — no fallback to embedded databases.
@@ -24,6 +34,15 @@ spring:
     out-of-order: false
 
 sfdc:
+  security:
+    # Set to false only in test profiles. Must be true in all CI and production environments.
+    # When false, the JWT security filter chain is not registered; disable only via
+    # application-test.properties, never in application.yaml.
+    enabled: true
+    # Expected JWT audience claim value. Tokens whose aud claim does not include this value
+    # are rejected before controller execution. Set via OAUTH2_EXPECTED_AUDIENCE in production.
+    expected-audience: ${OAUTH2_EXPECTED_AUDIENCE:sfdc-integrator}
+
   audit:
     # Set to false only for local development without a database. Must be true in all
     # CI and production environments — governed mutations fail closed when audit is disabled

@@ -1,0 +1,9 @@
+{
+  "_comment": "JWT claims map with no scope, scp, or scopes claim. CallerContextResolver must return an empty scope set. No real tokens or signing keys.",
+  "sub": "test-caller-subject-003",
+  "client_id": "sfdc-test-client-003",
+  "iss": "https://idp.example.internal",
+  "aud": ["sfdc-integrator"],
+  "exp": 9999999999,
+  "iat": 1700000000
+}

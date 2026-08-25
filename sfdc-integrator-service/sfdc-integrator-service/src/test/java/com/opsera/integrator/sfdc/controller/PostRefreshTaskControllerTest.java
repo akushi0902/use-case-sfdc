@@ -24,11 +24,13 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * Controller tests for {@link PostRefreshTaskController} verifying legacy route compatibility
  * and that classification context is created at request entry (AC-2, AC-5).
  */
+@WithMockUser
 @WebMvcTest(controllers = PostRefreshTaskController.class)
 @Import(SfdcExceptionHandler.class)
 class PostRefreshTaskControllerTest {
