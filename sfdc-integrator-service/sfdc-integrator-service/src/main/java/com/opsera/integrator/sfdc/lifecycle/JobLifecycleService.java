@@ -1,5 +1,12 @@
 package com.opsera.integrator.sfdc.lifecycle;
 
+import com.opsera.integrator.sfdc.governance.audit.AuditActorType;
+import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
+import com.opsera.integrator.sfdc.governance.audit.AuditOperation;
+import com.opsera.integrator.sfdc.governance.audit.AuditResourceType;
+import com.opsera.integrator.sfdc.governance.audit.AuditWriteException;
+import com.opsera.integrator.sfdc.governance.audit.SafeAuditMetadata;
+import com.opsera.integrator.sfdc.governance.classification.DataClassification;
 import com.opsera.integrator.sfdc.lifecycle.model.JobCheckpoint;
 import com.opsera.integrator.sfdc.lifecycle.model.JobDiagnostic;
 import com.opsera.integrator.sfdc.lifecycle.model.JobRecord;
@@ -40,9 +47,11 @@ public class JobLifecycleService {
 
     private final JobRepository repository;
     private final LifecycleTransitionPolicy policy;
+    private final AuditEventWriter auditWriter;
 
-    public JobLifecycleService(JobRepository repository) {
+    public JobLifecycleService(JobRepository repository, AuditEventWriter auditWriter) {
         this.repository = repository;
+        this.auditWriter = auditWriter;
         this.policy = new LifecycleTransitionPolicy();
     }
 
@@ -105,6 +114,9 @@ public class JobLifecycleService {
         if (shouldPersistDiagnostic(targetState)) {
             persistDiagnostic(job, request);
         }
+
+        // Emit audit event for the state transition — fails closed on AuditWriteException
+        emitTransitionAuditEvent(job, currentState, targetState, request);
 
         return TransitionResult.builder()
                 .jobId(jobId)
@@ -222,11 +234,12 @@ public class JobLifecycleService {
     }
 
     private void appendCheckpoint(JobRecord job, JobLifecycleState newState, TransitionRequest req) {
+        String checkpointCode = req.getCheckpointCode() != null ? req.getCheckpointCode() : newState.name();
         try {
             JobCheckpoint cp = new JobCheckpoint();
             cp.setJobId(job.getJobId());
             cp.setSequenceNumber(req.getCheckpointSequenceNumber());
-            cp.setCheckpointCode(req.getCheckpointCode() != null ? req.getCheckpointCode() : newState.name());
+            cp.setCheckpointCode(checkpointCode);
             cp.setStateAtCheckpoint(newState.name());
             cp.setSafeMessage(req.getSafeReasonCode());
             cp.setCreatedAt(Instant.now());
@@ -234,6 +247,26 @@ public class JobLifecycleService {
         } catch (Exception e) {
             log.warn("Failed to append checkpoint for job='{}': {} — state update was committed",
                     job.getJobId(), e.getMessage());
+            return;
+        }
+        // Audit checkpoint persistence (best-effort — log error but don't propagate)
+        try {
+            String meta = SafeAuditMetadata.builder()
+                    .field("jobId", job.getJobId())
+                    .field("checkpointCode", checkpointCode)
+                    .field("toState", newState.name())
+                    .toJson();
+            auditWriter.write(AuditActorType.SYSTEM,
+                    job.getCorrelationId(),
+                    AuditResourceType.LIFECYCLE_JOB,
+                    job.getJobId(),
+                    AuditOperation.CHECKPOINT_PERSISTED,
+                    DataClassification.CONFIDENTIAL,
+                    meta,
+                    "JobLifecycleService.appendCheckpoint");
+        } catch (AuditWriteException e) {
+            log.error("Audit write failed for checkpoint: job='{}' code='{}' — checkpoint was saved",
+                    job.getJobId(), checkpointCode);
         }
     }
 
@@ -243,7 +276,39 @@ public class JobLifecycleService {
                 || state == JobLifecycleState.REJECTED;
     }
 
+    private void emitTransitionAuditEvent(JobRecord job, JobLifecycleState fromState,
+                                          JobLifecycleState toState, TransitionRequest req) {
+        AuditOperation operation = resolveAuditOperation(toState);
+        String actorRef = req.getCorrelationId() != null && !req.getCorrelationId().isBlank()
+                ? req.getCorrelationId() : job.getCorrelationId();
+        String meta = SafeAuditMetadata.builder()
+                .field("jobId", job.getJobId())
+                .field("fromState", fromState.name())
+                .field("toState", toState.name())
+                .field("operationType", job.getOperationType())
+                .toJson();
+        auditWriter.write(AuditActorType.SYSTEM,
+                actorRef,
+                AuditResourceType.LIFECYCLE_JOB,
+                job.getJobId(),
+                operation,
+                DataClassification.CONFIDENTIAL,
+                meta,
+                "JobLifecycleService.transition");
+    }
+
+    private static AuditOperation resolveAuditOperation(JobLifecycleState targetState) {
+        return switch (targetState) {
+            case ACCEPTED -> AuditOperation.JOB_SUBMITTED;
+            case DISPATCHING -> AuditOperation.DISPATCH_HANDOFF;
+            case CANCELLED -> AuditOperation.JOB_CANCELLED;
+            case TIMED_OUT -> AuditOperation.JOB_TIMEOUT_FINALIZED;
+            default -> AuditOperation.JOB_LIFECYCLE_TRANSITION;
+        };
+    }
+
     private void persistDiagnostic(JobRecord job, TransitionRequest req) {
+        String errorCode = req.getSafeReasonCode() != null ? req.getSafeReasonCode() : DEFAULT_FAILURE_CODE;
         try {
             JobDiagnostic diag = new JobDiagnostic();
             diag.setJobId(job.getJobId());
@@ -253,12 +318,31 @@ public class JobLifecycleService {
                 summary = summary.substring(0, 1021) + "...";
             }
             diag.setSafeSummary(summary);
-            diag.setErrorCode(req.getSafeReasonCode() != null ? req.getSafeReasonCode() : DEFAULT_FAILURE_CODE);
+            diag.setErrorCode(errorCode);
             diag.setCreatedAt(Instant.now());
             repository.saveDiagnostic(diag);
         } catch (Exception e) {
             log.warn("Failed to persist diagnostic for job='{}': {} — state update was committed",
                     job.getJobId(), e.getMessage());
+            return;
+        }
+        // Audit diagnostic update (best-effort — log error but don't propagate)
+        try {
+            String meta = SafeAuditMetadata.builder()
+                    .field("jobId", job.getJobId())
+                    .field("outcome", errorCode)
+                    .toJson();
+            auditWriter.write(AuditActorType.SYSTEM,
+                    job.getCorrelationId(),
+                    AuditResourceType.LIFECYCLE_JOB,
+                    job.getJobId(),
+                    AuditOperation.DIAGNOSTIC_UPDATED,
+                    DataClassification.CONFIDENTIAL,
+                    meta,
+                    "JobLifecycleService.persistDiagnostic");
+        } catch (AuditWriteException e) {
+            log.error("Audit write failed for diagnostic: job='{}' errorCode='{}' — diagnostic was saved",
+                    job.getJobId(), errorCode);
         }
     }
 }

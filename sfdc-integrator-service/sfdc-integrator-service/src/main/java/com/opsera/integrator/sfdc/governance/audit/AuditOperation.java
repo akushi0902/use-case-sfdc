@@ -43,5 +43,17 @@ public enum AuditOperation {
     RETENTION_METADATA_ASSIGNED,
 
     /** A legal hold was applied to or released from a retention metadata record. */
-    LEGAL_HOLD_APPLIED
+    LEGAL_HOLD_APPLIED,
+
+    /** A lifecycle checkpoint record was persisted for a durable job. */
+    CHECKPOINT_PERSISTED,
+
+    /** A release job was handed off to the dispatch worker. */
+    DISPATCH_HANDOFF,
+
+    /** A job reached the TIMED_OUT terminal state after deadline expiry. */
+    JOB_TIMEOUT_FINALIZED,
+
+    /** A safe diagnostic summary was written or updated for a terminal failure state. */
+    DIAGNOSTIC_UPDATED
 }

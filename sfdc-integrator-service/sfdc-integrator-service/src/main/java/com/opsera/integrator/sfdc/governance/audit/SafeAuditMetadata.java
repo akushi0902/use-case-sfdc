@@ -37,7 +37,12 @@ public final class SafeAuditMetadata {
             "requestSource",
             "retentionCategory",
             "legalHold",
-            "purgeEligibilityStatus"
+            "purgeEligibilityStatus",
+            "jobId",
+            "fromState",
+            "toState",
+            "checkpointCode",
+            "retentionExpiry"
     );
 
     private SafeAuditMetadata() {}

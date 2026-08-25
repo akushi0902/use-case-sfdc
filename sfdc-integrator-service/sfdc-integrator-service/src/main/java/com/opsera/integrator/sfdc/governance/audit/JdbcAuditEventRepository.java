@@ -22,8 +22,8 @@ class JdbcAuditEventRepository implements AuditEventRepository {
     private static final String INSERT_SQL =
             "INSERT INTO audit_events " +
             "(event_id, correlation_id, actor_type, actor_ref, resource_type, resource_ref, " +
-            " operation, classification, safe_metadata, event_timestamp, request_source) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            " operation, classification, safe_metadata, event_timestamp, request_source, retention_expiry_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -47,7 +47,10 @@ class JdbcAuditEventRepository implements AuditEventRepository {
                     event.getEventTimestamp() != null
                             ? Timestamp.from(event.getEventTimestamp())
                             : new Timestamp(System.currentTimeMillis()),
-                    event.getRequestSource());
+                    event.getRequestSource(),
+                    event.getRetentionExpiryAt() != null
+                            ? Timestamp.from(event.getRetentionExpiryAt())
+                            : null);
         } catch (Exception ex) {
             throw new AuditWriteException(
                     event.getEventId(),

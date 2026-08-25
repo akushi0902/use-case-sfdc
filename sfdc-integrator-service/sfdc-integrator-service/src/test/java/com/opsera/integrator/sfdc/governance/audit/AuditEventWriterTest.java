@@ -163,6 +163,81 @@ class AuditEventWriterTest {
             .hasMessageContaining("JOB_SUBMITTED");
     }
 
+    // ---- system actor overload ----
+
+    @Test
+    void write_systemActor_usesSystemActorType() {
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+
+        writerEnabled.write(
+                AuditActorType.SYSTEM,
+                "cid-lifecycle-001",
+                AuditResourceType.LIFECYCLE_JOB,
+                "job-lifecycle-001",
+                AuditOperation.DISPATCH_HANDOFF,
+                DataClassification.CONFIDENTIAL,
+                "{\"jobId\":\"job-lifecycle-001\",\"fromState\":\"ACCEPTED\",\"toState\":\"DISPATCHING\"}",
+                "JobLifecycleService.transition");
+
+        verify(repository).append(captor.capture());
+        assertThat(captor.getValue().getActorType()).isEqualTo(AuditActorType.SYSTEM);
+        assertThat(captor.getValue().getOperation()).isEqualTo(AuditOperation.DISPATCH_HANDOFF);
+        assertThat(captor.getValue().getResourceType()).isEqualTo(AuditResourceType.LIFECYCLE_JOB);
+    }
+
+    @Test
+    void write_systemActor_retentionExpiryAtIsSet() {
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+
+        writerEnabled.write(
+                AuditActorType.SYSTEM,
+                "cid-lifecycle-002",
+                AuditResourceType.LIFECYCLE_JOB,
+                "job-lifecycle-002",
+                AuditOperation.JOB_TIMEOUT_FINALIZED,
+                DataClassification.CONFIDENTIAL,
+                null,
+                "JobLifecycleService.transition");
+
+        verify(repository).append(captor.capture());
+        assertThat(captor.getValue().getRetentionExpiryAt()).isNotNull();
+        // retentionExpiryAt must be after the event timestamp
+        assertThat(captor.getValue().getRetentionExpiryAt())
+                .isAfter(captor.getValue().getEventTimestamp());
+    }
+
+    @Test
+    void write_applicationActor_backwardCompatible_usesApplicationActorType() {
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+
+        writerEnabled.write(
+                "pipeline-compat-001",
+                AuditResourceType.QUICK_DEPLOY_JOB,
+                "pipeline-compat-001",
+                AuditOperation.JOB_SUBMITTED,
+                DataClassification.CONFIDENTIAL,
+                null,
+                "TestController.method");
+
+        verify(repository).append(captor.capture());
+        assertThat(captor.getValue().getActorType()).isEqualTo(AuditActorType.APPLICATION);
+    }
+
+    @Test
+    void computeRetentionExpiry_confidential_returnsOneYearFromEvent() {
+        java.time.Instant now = java.time.Instant.parse("2024-01-01T10:00:00Z");
+        java.time.Instant expiry = AuditEventWriter.computeRetentionExpiry(now, DataClassification.CONFIDENTIAL);
+        assertThat(expiry).isEqualTo(java.time.Instant.parse("2025-01-01T10:00:00Z"));
+    }
+
+    @Test
+    void computeRetentionExpiry_restricted_returnsSixYearsFromEvent() {
+        java.time.Instant now = java.time.Instant.parse("2024-01-01T10:00:00Z");
+        java.time.Instant expiry = AuditEventWriter.computeRetentionExpiry(now, DataClassification.RESTRICTED);
+        // 7 * 365 = 2555 days from 2024-01-01 = approximately 2031-01-01
+        assertThat(expiry).isAfter(java.time.Instant.parse("2030-01-01T00:00:00Z"));
+    }
+
     // ---- disabled mode ----
 
     @Test

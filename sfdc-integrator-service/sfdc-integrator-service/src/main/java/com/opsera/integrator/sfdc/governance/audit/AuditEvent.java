@@ -30,6 +30,7 @@ public final class AuditEvent {
     private final String safeMetadata;
     private final Instant eventTimestamp;
     private final String requestSource;
+    private final Instant retentionExpiryAt;
 
     private AuditEvent(Builder b) {
         this.eventId = b.eventId;
@@ -43,6 +44,7 @@ public final class AuditEvent {
         this.safeMetadata = b.safeMetadata;
         this.eventTimestamp = b.eventTimestamp;
         this.requestSource = b.requestSource;
+        this.retentionExpiryAt = b.retentionExpiryAt;
     }
 
     public String getEventId() { return eventId; }
@@ -56,6 +58,7 @@ public final class AuditEvent {
     public String getSafeMetadata() { return safeMetadata; }
     public Instant getEventTimestamp() { return eventTimestamp; }
     public String getRequestSource() { return requestSource; }
+    public Instant getRetentionExpiryAt() { return retentionExpiryAt; }
 
     /** Safe log representation — omits actorRef and resourceRef. */
     @Override
@@ -84,6 +87,7 @@ public final class AuditEvent {
         private String safeMetadata;
         private Instant eventTimestamp;
         private String requestSource;
+        private Instant retentionExpiryAt;
 
         private Builder() {}
 
@@ -140,6 +144,11 @@ public final class AuditEvent {
 
         public Builder requestSource(String requestSource) {
             this.requestSource = requestSource;
+            return this;
+        }
+
+        public Builder retentionExpiryAt(Instant retentionExpiryAt) {
+            this.retentionExpiryAt = retentionExpiryAt;
             return this;
         }
 

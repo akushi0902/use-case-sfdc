@@ -1,5 +1,6 @@
 package com.opsera.integrator.sfdc.lifecycle;
 
+import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
 import com.opsera.integrator.sfdc.lifecycle.model.JobCheckpoint;
 import com.opsera.integrator.sfdc.lifecycle.model.JobDiagnostic;
 import com.opsera.integrator.sfdc.lifecycle.model.JobRecord;
@@ -22,12 +23,14 @@ import static org.mockito.Mockito.*;
 class JobLifecycleServiceTest {
 
     private JobRepository repository;
+    private AuditEventWriter auditWriter;
     private JobLifecycleService service;
 
     @BeforeEach
     void setUp() {
         repository = mock(JobRepository.class);
-        service = new JobLifecycleService(repository);
+        auditWriter = mock(AuditEventWriter.class);
+        service = new JobLifecycleService(repository, auditWriter);
     }
 
     // ---- Successful transitions ----
@@ -148,6 +151,7 @@ class JobLifecycleServiceTest {
         verify(repository, never()).updateState(any(), any(), anyLong());
         verify(repository, never()).saveCheckpoint(any());
         verify(repository, never()).saveDiagnostic(any());
+        verify(auditWriter, never()).write(any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
