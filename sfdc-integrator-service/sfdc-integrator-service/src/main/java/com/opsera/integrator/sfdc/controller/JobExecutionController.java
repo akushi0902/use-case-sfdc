@@ -1,5 +1,6 @@
 package com.opsera.integrator.sfdc.controller;
 
+import com.opsera.integrator.sfdc.correlation.CorrelationIdConstants;
 import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
 import com.opsera.integrator.sfdc.governance.audit.AuditOperation;
 import com.opsera.integrator.sfdc.governance.audit.AuditResourceType;
@@ -11,6 +12,8 @@ import com.opsera.integrator.sfdc.logging.SafeLogEvent;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
+import com.opsera.integrator.sfdc.observability.SafeTraceAttributes;
+import com.opsera.integrator.sfdc.observability.TraceContextPropagation;
 import com.opsera.integrator.sfdc.security.CallerContextResolver;
 import com.opsera.integrator.sfdc.security.ScopeAuthorizer;
 import com.opsera.integrator.sfdc.security.ScopeConstants;
@@ -18,6 +21,7 @@ import com.opsera.integrator.sfdc.security.ShellArgumentProfile;
 import com.opsera.integrator.sfdc.security.ShellArgumentValidator;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
 import jakarta.validation.Valid;
+import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,6 +58,7 @@ public class JobExecutionController {
     private final ShellArgumentValidator shellArgumentValidator;
     private final CallerContextResolver callerContextResolver;
     private final ScopeAuthorizer scopeAuthorizer;
+    private final TraceContextPropagation traceContextPropagation;
 
     public JobExecutionController(QuickDeployService quickDeployService,
                                    ClassificationPolicyResolver classificationResolver,
@@ -61,7 +66,8 @@ public class JobExecutionController {
                                    AuditEventWriter auditWriter,
                                    ShellArgumentValidator shellArgumentValidator,
                                    CallerContextResolver callerContextResolver,
-                                   ScopeAuthorizer scopeAuthorizer) {
+                                   ScopeAuthorizer scopeAuthorizer,
+                                   TraceContextPropagation traceContextPropagation) {
         this.quickDeployService = quickDeployService;
         this.classificationResolver = classificationResolver;
         this.safeLogger = safeLogger;
@@ -69,6 +75,7 @@ public class JobExecutionController {
         this.shellArgumentValidator = shellArgumentValidator;
         this.callerContextResolver = callerContextResolver;
         this.scopeAuthorizer = scopeAuthorizer;
+        this.traceContextPropagation = traceContextPropagation;
     }
 
     /**
@@ -80,54 +87,75 @@ public class JobExecutionController {
     @PostMapping
     public ResponseEntity<String> startQuickDeploy(@Valid @RequestBody QuickDeployRequest request,
                                                     Authentication authentication) {
-        scopeAuthorizer.requireScope(
-                callerContextResolver.resolve(authentication),
-                ScopeConstants.QUICK_DEPLOY_SUBMIT,
-                "quick-deploy-start");
+        String correlationId = MDC.get(CorrelationIdConstants.MDC_KEY);
 
-        classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-start");
+        try (TraceContextPropagation.SpanInScope span =
+                     traceContextPropagation.startSpan(SafeTraceAttributes.OP_QUICK_DEPLOY_START)) {
+            span.tag(SafeTraceAttributes.ATTR_OPERATION, SafeTraceAttributes.OP_QUICK_DEPLOY_START)
+                .tag(SafeTraceAttributes.ATTR_LIFECYCLE_PHASE, SafeTraceAttributes.PHASE_REQUEST_RECEIVED)
+                .tag(SafeTraceAttributes.ATTR_HTTP_ROUTE, SafeTraceAttributes.ROUTE_QUICK_DEPLOY)
+                .tag(SafeTraceAttributes.ATTR_CORRELATION_ID, correlationId != null ? correlationId : "");
 
-        // Shell argument safety: validate all fields that may reach script execution before
-        // delegating to the service. Unsafe values are rejected here; ShellArgumentViolationException
-        // propagates to SfdcExceptionHandler which returns HTTP 400 with SHELL_UNSAFE_INPUT.
-        shellArgumentValidator.validate(request.getDeploymentRequestId(), "deploymentRequestId",
-                ShellArgumentProfile.DEPLOYMENT_IDENTIFIER);
-        shellArgumentValidator.validateIfPresent(request.getPipelineId(), "pipelineId",
-                ShellArgumentProfile.GENERIC_LABEL);
-        shellArgumentValidator.validateIfPresent(request.getStepId(), "stepId",
-                ShellArgumentProfile.TASK_IDENTIFIER);
-        shellArgumentValidator.validateIfPresent(request.getFallbackTaskId(), "fallbackTaskId",
-                ShellArgumentProfile.TASK_IDENTIFIER);
+            try {
+                scopeAuthorizer.requireScope(
+                        callerContextResolver.resolve(authentication),
+                        ScopeConstants.QUICK_DEPLOY_SUBMIT,
+                        "quick-deploy-start");
 
-        safeLogger.logEvent(SafeLogEvent.builder()
-                .operation("quick-deploy-start")
-                .controller("JobExecutionController")
-                .outcome(SafeLogEvent.Outcome.ACCEPTED)
-                .safeField("pipelineId", request.getPipelineId())
-                .safeField("stepId", request.getStepId())
-                .build());
+                classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-start");
 
-        // Normalize optional fallback field so downstream code never sees null
-        if (request.getFallbackTaskId() == null) {
-            request.setFallbackTaskId("");
+                // Shell argument safety: validate all fields that may reach script execution before
+                // delegating to the service. Unsafe values are rejected here; ShellArgumentViolationException
+                // propagates to SfdcExceptionHandler which returns HTTP 400 with SHELL_UNSAFE_INPUT.
+                shellArgumentValidator.validate(request.getDeploymentRequestId(), "deploymentRequestId",
+                        ShellArgumentProfile.DEPLOYMENT_IDENTIFIER);
+                shellArgumentValidator.validateIfPresent(request.getPipelineId(), "pipelineId",
+                        ShellArgumentProfile.GENERIC_LABEL);
+                shellArgumentValidator.validateIfPresent(request.getStepId(), "stepId",
+                        ShellArgumentProfile.TASK_IDENTIFIER);
+                shellArgumentValidator.validateIfPresent(request.getFallbackTaskId(), "fallbackTaskId",
+                        ShellArgumentProfile.TASK_IDENTIFIER);
+
+                span.tag(SafeTraceAttributes.ATTR_LIFECYCLE_PHASE, SafeTraceAttributes.PHASE_VALIDATION);
+
+                safeLogger.logEvent(SafeLogEvent.builder()
+                        .operation("quick-deploy-start")
+                        .controller("JobExecutionController")
+                        .outcome(SafeLogEvent.Outcome.ACCEPTED)
+                        .safeField("pipelineId", request.getPipelineId())
+                        .safeField("stepId", request.getStepId())
+                        .build());
+
+                // Normalize optional fallback field so downstream code never sees null
+                if (request.getFallbackTaskId() == null) {
+                    request.setFallbackTaskId("");
+                }
+
+                span.tag(SafeTraceAttributes.ATTR_LIFECYCLE_PHASE, SafeTraceAttributes.PHASE_DISPATCH);
+                quickDeployService.start(request);
+
+                auditWriter.write(
+                        request.getPipelineId(),
+                        AuditResourceType.QUICK_DEPLOY_JOB,
+                        request.getPipelineId() != null ? request.getPipelineId() : "unknown",
+                        AuditOperation.JOB_SUBMITTED,
+                        DataClassification.CONFIDENTIAL,
+                        SafeAuditMetadata.builder()
+                                .field("pipelineId", request.getPipelineId())
+                                .field("stepId", request.getStepId())
+                                .field("outcome", "SUBMITTED")
+                                .toJson(),
+                        "JobExecutionController.startQuickDeploy");
+
+                span.tag(SafeTraceAttributes.ATTR_OUTCOME, SafeTraceAttributes.OUTCOME_ACCEPTED);
+                return ResponseEntity.ok(SUCCESS);
+            } catch (Exception e) {
+                span.tag(SafeTraceAttributes.ATTR_LIFECYCLE_PHASE, SafeTraceAttributes.PHASE_EXCEPTION)
+                    .tag(SafeTraceAttributes.ATTR_OUTCOME, SafeTraceAttributes.OUTCOME_ERROR)
+                    .error(e);
+                throw e;
+            }
         }
-
-        quickDeployService.start(request);
-
-        auditWriter.write(
-                request.getPipelineId(),
-                AuditResourceType.QUICK_DEPLOY_JOB,
-                request.getPipelineId() != null ? request.getPipelineId() : "unknown",
-                AuditOperation.JOB_SUBMITTED,
-                DataClassification.CONFIDENTIAL,
-                SafeAuditMetadata.builder()
-                        .field("pipelineId", request.getPipelineId())
-                        .field("stepId", request.getStepId())
-                        .field("outcome", "SUBMITTED")
-                        .toJson(),
-                "JobExecutionController.startQuickDeploy");
-
-        return ResponseEntity.ok(SUCCESS);
     }
 
     /**
@@ -139,40 +167,59 @@ public class JobExecutionController {
     @PostMapping("/stop")
     public ResponseEntity<String> stopQuickDeploy(@RequestBody QuickDeployStopRequest request,
                                                    Authentication authentication) {
-        scopeAuthorizer.requireScope(
-                callerContextResolver.resolve(authentication),
-                ScopeConstants.QUICK_DEPLOY_CANCEL,
-                "quick-deploy-stop");
+        String correlationId = MDC.get(CorrelationIdConstants.MDC_KEY);
 
-        classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-stop");
+        try (TraceContextPropagation.SpanInScope span =
+                     traceContextPropagation.startSpan(SafeTraceAttributes.OP_QUICK_DEPLOY_STOP)) {
+            span.tag(SafeTraceAttributes.ATTR_OPERATION, SafeTraceAttributes.OP_QUICK_DEPLOY_STOP)
+                .tag(SafeTraceAttributes.ATTR_LIFECYCLE_PHASE, SafeTraceAttributes.PHASE_CANCELLATION)
+                .tag(SafeTraceAttributes.ATTR_HTTP_ROUTE, SafeTraceAttributes.ROUTE_QUICK_DEPLOY_STOP)
+                .tag(SafeTraceAttributes.ATTR_CORRELATION_ID, correlationId != null ? correlationId : "");
 
-        // Shell argument safety: validate shell-bound fields before service delegation.
-        shellArgumentValidator.validateIfPresent(request.getDeploymentRequestId(), "deploymentRequestId",
-                ShellArgumentProfile.DEPLOYMENT_IDENTIFIER);
-        shellArgumentValidator.validateIfPresent(request.getPipelineId(), "pipelineId",
-                ShellArgumentProfile.GENERIC_LABEL);
+            try {
+                scopeAuthorizer.requireScope(
+                        callerContextResolver.resolve(authentication),
+                        ScopeConstants.QUICK_DEPLOY_CANCEL,
+                        "quick-deploy-stop");
 
-        safeLogger.logEvent(SafeLogEvent.builder()
-                .operation("quick-deploy-stop")
-                .controller("JobExecutionController")
-                .outcome(SafeLogEvent.Outcome.ACCEPTED)
-                .safeField("pipelineId", request.getPipelineId())
-                .build());
+                classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-stop");
 
-        quickDeployService.stop(request);
+                // Shell argument safety: validate shell-bound fields before service delegation.
+                shellArgumentValidator.validateIfPresent(request.getDeploymentRequestId(), "deploymentRequestId",
+                        ShellArgumentProfile.DEPLOYMENT_IDENTIFIER);
+                shellArgumentValidator.validateIfPresent(request.getPipelineId(), "pipelineId",
+                        ShellArgumentProfile.GENERIC_LABEL);
 
-        auditWriter.write(
-                request.getPipelineId(),
-                AuditResourceType.QUICK_DEPLOY_JOB,
-                request.getPipelineId() != null ? request.getPipelineId() : "unknown",
-                AuditOperation.JOB_CANCELLED,
-                DataClassification.CONFIDENTIAL,
-                SafeAuditMetadata.builder()
-                        .field("pipelineId", request.getPipelineId())
-                        .field("outcome", "CANCELLED")
-                        .toJson(),
-                "JobExecutionController.stopQuickDeploy");
+                safeLogger.logEvent(SafeLogEvent.builder()
+                        .operation("quick-deploy-stop")
+                        .controller("JobExecutionController")
+                        .outcome(SafeLogEvent.Outcome.ACCEPTED)
+                        .safeField("pipelineId", request.getPipelineId())
+                        .build());
 
-        return ResponseEntity.ok(SUCCESS);
+                span.tag(SafeTraceAttributes.ATTR_LIFECYCLE_PHASE, SafeTraceAttributes.PHASE_DISPATCH);
+                quickDeployService.stop(request);
+
+                auditWriter.write(
+                        request.getPipelineId(),
+                        AuditResourceType.QUICK_DEPLOY_JOB,
+                        request.getPipelineId() != null ? request.getPipelineId() : "unknown",
+                        AuditOperation.JOB_CANCELLED,
+                        DataClassification.CONFIDENTIAL,
+                        SafeAuditMetadata.builder()
+                                .field("pipelineId", request.getPipelineId())
+                                .field("outcome", "CANCELLED")
+                                .toJson(),
+                        "JobExecutionController.stopQuickDeploy");
+
+                span.tag(SafeTraceAttributes.ATTR_OUTCOME, SafeTraceAttributes.OUTCOME_ACCEPTED);
+                return ResponseEntity.ok(SUCCESS);
+            } catch (Exception e) {
+                span.tag(SafeTraceAttributes.ATTR_LIFECYCLE_PHASE, SafeTraceAttributes.PHASE_EXCEPTION)
+                    .tag(SafeTraceAttributes.ATTR_OUTCOME, SafeTraceAttributes.OUTCOME_ERROR)
+                    .error(e);
+                throw e;
+            }
+        }
     }
 }

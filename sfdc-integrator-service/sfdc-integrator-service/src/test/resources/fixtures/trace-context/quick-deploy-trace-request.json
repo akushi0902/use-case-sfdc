@@ -1,0 +1,7 @@
+{
+  "_comment": "Fixture for WO-144 trace-context tests — quick deploy start request with a synthetic correlation ID. No real credentials, org data, or Salesforce metadata.",
+  "deploymentRequestId": "trace-deploy-req-001",
+  "pipelineId": "trace-pipeline-001",
+  "stepId": "trace-step-001",
+  "fallbackTaskId": "trace-fallback-001"
+}

@@ -2,6 +2,7 @@ package com.opsera.integrator.sfdc.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
+import com.opsera.integrator.sfdc.observability.TraceContextPropagation;
 import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
 import com.opsera.integrator.sfdc.logging.SafeLogEvent;
@@ -9,6 +10,7 @@ import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.security.ShellArgumentValidator;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -20,6 +22,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -66,6 +70,15 @@ class JobExecutionControllerSafeLoggingTest {
 
     @MockBean
     private com.opsera.integrator.sfdc.security.ScopeAuthorizer scopeAuthorizer;
+
+    @MockBean
+    private TraceContextPropagation traceContextPropagation;
+
+    @BeforeEach
+    void stubTracing() {
+        lenient().when(traceContextPropagation.startSpan(anyString()))
+                 .thenReturn(TraceContextPropagation.SpanInScope.NOOP);
+    }
 
     // ── quick deploy start ────────────────────────────────────────────────────
 

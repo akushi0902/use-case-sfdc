@@ -357,3 +357,10 @@
 - **Files:** 21 (+1118/-6)
 - **Duration:** 670ss
 - **Approach:** Built the retention purge process as a service/scheduler pair following the existing governance pattern. RetentionPurgeService is invokable directly (injectable Clock for testability) and wrapped by RetentionPurgeScheduler. Three modes: DISABLED (no-op), DRY_RUN (select+count, no mutation), ENFORCE (select + cryptographic erasure). Candidate selection queries job_retention_metadata for records where purge_eligible_at<=now, purge_eligibility_status=ELIGIBLE, legal_hold=false, purged_at IS NULL. Legal hold is double-checked per-record in ENFORCE mode (fail-closed). Erasure: deletes child records (checkpoints, diagnostics, worker_attempts) then NULLs sensitive fields in jobs row in-place (FK integrity maintained, tombstone pattern). Three audit events emitted per run (run_start, batch_result, run_complete) via existing AuditEventWriter. AtomicBoolean application-level lock prevents concurrent JVM runs. Configuration fully in application.yaml with enabled=false + mode=DISABLED safe defaults.
+
+## WO-144: User Story: WO-144 - Instrument Release Flows With OpenTelemetry
+- **Status:** completed
+- **Commit:** `2c57725`
+- **Files:** 18 (+898/-83)
+- **Duration:** 918ss
+- **Approach:** Added Micrometer OpenTelemetry tracing to the release-critical quick-deploy controller path. Created SafeTraceAttributes as an allow-list guard for span attribute keys, and TraceContextPropagation as a Spring component wrapping Micrometer Tracer with graceful NOOP degradation when the OTLP collector is unavailable. Instrumented JobExecutionController.startQuickDeploy and stopQuickDeploy with spans covering request-received, validation, dispatch, cancellation, and exception phases. Updated all 7 existing @WebMvcTest controller tests to mock TraceContextPropagation and stub startSpan() to return NOOP, preserving all legacy response contracts. Added 12 SafeTraceAttributes unit tests, 14 TraceContextPropagation unit tests using SimpleTracer, and 6 MockMvc integration tests for correlation header behavior.

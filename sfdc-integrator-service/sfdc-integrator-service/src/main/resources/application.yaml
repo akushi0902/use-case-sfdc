@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: sfdc-integrator-service
   security:
     oauth2:
       resourceserver:
@@ -156,6 +158,19 @@ sfdc:
         # Maximum wall-clock seconds for a single purge run before it is aborted.
         # Prevents long-running purge from impacting API response time.
         max-runtime-seconds: 300
+
+management:
+  tracing:
+    sampling:
+      # 1.0 = 100% sampling. Override per environment: OTEL_SAMPLING_PROBABILITY=0.1 for production.
+      # Set to 0.0 to disable sampling without removing the tracing dependency.
+      probability: ${OTEL_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      # OTLP endpoint for span export. Left empty by default — no spans are exported unless
+      # OTEL_EXPORTER_OTLP_ENDPOINT is set in the runtime environment (e.g. Kubernetes ConfigMap).
+      # When empty, Spring Boot auto-configuration keeps the no-op exporter active.
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:}
 
 springdoc:
   # Documentation endpoint: GET /api-docs returns the generated OpenAPI JSON.

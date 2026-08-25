@@ -133,6 +133,11 @@ dependencies {
     // Compatible with Spring Boot 3.4.1 / Spring 6.2.x
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 
+    // Micrometer tracing — OpenTelemetry bridge (Spring Boot BOM manages version)
+    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    // OpenTelemetry OTLP exporter — exports spans to the organization-standard collector when enabled
+    runtimeOnly 'io.opentelemetry:opentelemetry-exporter-otlp'
+
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
@@ -140,6 +145,8 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     // H2 in-memory database for isolated test datasource (PostgreSQL compatibility mode)
     testRuntimeOnly 'com.h2database:h2'
+    // Micrometer tracing test support — provides SimpleTracer for span assertion in unit tests
+    testImplementation 'io.micrometer:micrometer-tracing-test'
 }
 
 test {

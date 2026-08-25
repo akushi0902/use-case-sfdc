@@ -2,6 +2,7 @@ package com.opsera.integrator.sfdc.controller;
 
 import com.opsera.integrator.sfdc.exceptions.ScopeAuthorizationException;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
+import com.opsera.integrator.sfdc.observability.TraceContextPropagation;
 import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
@@ -11,6 +12,7 @@ import com.opsera.integrator.sfdc.security.ScopeAuthorizer;
 import com.opsera.integrator.sfdc.security.ScopeConstants;
 import com.opsera.integrator.sfdc.security.ShellArgumentValidator;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,8 +29,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -82,6 +86,15 @@ class JobExecutionControllerAuthorizationTest {
 
     @MockBean
     private ScopeAuthorizer scopeAuthorizer;
+
+    @MockBean
+    private TraceContextPropagation traceContextPropagation;
+
+    @BeforeEach
+    void stubTracing() {
+        lenient().when(traceContextPropagation.startSpan(anyString()))
+                 .thenReturn(TraceContextPropagation.SpanInScope.NOOP);
+    }
 
     private String fixture(String name) throws Exception {
         return new ClassPathResource("fixtures/quickdeploy/" + name)
