@@ -1,5 +1,6 @@
 package com.opsera.integrator.sfdc.resources.v2.release;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -9,12 +10,24 @@ import java.util.List;
  * otherwise the list is empty. Stack traces and raw Salesforce payloads are never
  * included in this response (AC-7).
  */
+@Schema(description = "Structured error response. No stack traces or raw Salesforce payloads are included.")
 public class V2ErrorResponse {
 
+    @Schema(description = "Machine-readable error code", example = "VALIDATION_FAILURE")
     private String errorCode;
+
+    @Schema(description = "Human-readable error message", example = "Request validation failed.")
     private String message;
+
+    @Schema(description = "Correlation identifier for tracing this error in logs",
+            example = "corr-example-00000000-0000-0000-0000-000000000099")
     private String correlationId;
+
+    @Schema(description = "Hint for resolving the error",
+            example = "Ensure all required fields are present and within size constraints.")
     private String remediationHint;
+
+    @Schema(description = "Per-field validation errors. Empty when not a validation failure.")
     private List<FieldError> fieldErrors;
 
     public V2ErrorResponse() {

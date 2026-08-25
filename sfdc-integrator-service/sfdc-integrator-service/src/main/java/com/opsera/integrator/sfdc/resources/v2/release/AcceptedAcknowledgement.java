@@ -1,5 +1,6 @@
 package com.opsera.integrator.sfdc.resources.v2.release;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,14 +10,33 @@ import java.util.List;
  * V2 response DTO returned immediately after a release command is accepted for asynchronous
  * execution. Callers use {@code statusUrl} for subsequent polling.
  */
+@Schema(description = "Acknowledgement returned when a v2 release command is accepted. "
+        + "Use statusUrl to poll the job status.")
 public class AcceptedAcknowledgement {
 
+    @Schema(description = "Unique job identifier", example = "job-example-00000000-0000-0000-0000-000000000001")
     private String jobId;
+
+    @Schema(description = "Correlation identifier for tracing this job across logs",
+            example = "corr-example-00000000-0000-0000-0000-000000000001")
     private String correlationId;
+
+    @Schema(description = "URL for polling this job's lifecycle state",
+            example = "/api/v2/sfdc/release-jobs/job-example-00000000-0000-0000-0000-000000000001/status")
     private String statusUrl;
+
+    @Schema(description = "Initial lifecycle state; always ACCEPTED on submission",
+            example = "ACCEPTED")
     private ReleaseLifecycleState state;
+
+    @Schema(description = "Timestamp when the command was accepted",
+            example = "2024-01-01T00:00:00.000Z")
     private Instant acceptedAt;
+
+    @Schema(description = "Operation type echoed from the request", example = "DEPLOY")
     private ReleaseOperationType operationType;
+
+    @Schema(description = "Non-critical warnings from validation or routing. No sensitive values.")
     private List<String> safeWarnings;
 
     public AcceptedAcknowledgement() {

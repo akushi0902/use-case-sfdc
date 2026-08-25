@@ -1,0 +1,7 @@
+{
+  "_comment": "OpenAPI example for HTTP 401 Unauthorized response. No real tokens or credentials included. correlationId uses a safe example placeholder.",
+  "errorCode": "AUTHENTICATION_REQUIRED",
+  "message": "Authentication is required to access this resource. Provide a valid Bearer JWT.",
+  "correlationId": "corr-example-00000000-0000-0000-0000-000000000401",
+  "remediation": "Include a valid Bearer JWT in the Authorization header: Authorization: Bearer <token>"
+}

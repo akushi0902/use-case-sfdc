@@ -1,8 +1,17 @@
 package com.opsera.integrator.sfdc.controller.v2;
 
+import com.opsera.integrator.sfdc.exceptions.ErrorResponse;
 import com.opsera.integrator.sfdc.resources.v2.release.AcceptedAcknowledgement;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.services.v2.ReleaseCommandFacade;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -26,6 +35,8 @@ import java.net.URI;
  * {@code sfdc.v2.release.routes.enabled} property (default: {@code true}).
  * When disabled, any request to this path returns HTTP 404 without affecting legacy routes.
  */
+@Tag(name = "V2 Release Jobs", description = "Typed release job commands. Use these endpoints for new integrations. "
+        + "Legacy endpoints (/quickdeploy, /deploy) remain available during coexistence.")
 @RestController
 @RequestMapping("/api/v2/sfdc/release-jobs")
 public class ReleaseJobController {
@@ -48,6 +59,35 @@ public class ReleaseJobController {
      * Returns HTTP 400 on validation failure (handled by {@code SfdcExceptionHandler}).
      * Returns HTTP 422 when the operation type is not yet supported.
      */
+    @Operation(
+            summary = "Submit a v2 release command",
+            description = "Accepts a typed release command (DEPLOY, VALIDATE, QUICK_DEPLOY) for asynchronous "
+                    + "execution. Returns 202 Accepted immediately with a jobId and statusUrl for polling. "
+                    + "CANCEL returns 422 until full implementation is available. "
+                    + "Requires a valid Bearer JWT in the Authorization header.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "Command accepted for asynchronous execution",
+                    headers = @Header(name = "Location",
+                            description = "URL for polling the job status",
+                            schema = @Schema(type = "string", example = "/api/v2/sfdc/release-jobs/job-id/status")),
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = AcceptedAcknowledgement.class))),
+            @ApiResponse(responseCode = "400", description = "Validation failure — one or more required fields are invalid",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication required — valid Bearer JWT must be provided",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Insufficient scope — JWT does not grant the required release permission",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "V2 route family is disabled in this deployment",
+                    content = @Content),
+            @ApiResponse(responseCode = "422", description = "Operation type not yet supported (e.g. CANCEL)",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> submitReleaseCommand(@Valid @RequestBody ReleaseCommandRequest request) {
         if (!routesEnabled) {

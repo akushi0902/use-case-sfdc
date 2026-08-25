@@ -78,6 +78,30 @@ sfdc:
         AUDIT_CONTEXT: EXTENDED
         CACHE_ENTRY: SHORT_TERM
 
+springdoc:
+  # Documentation endpoint: GET /api-docs returns the generated OpenAPI JSON.
+  # NOTE: /api-docs is the documentation endpoint — it is NOT the business v2 route
+  # namespace (/api/v2/sfdc/...). Consumers must not confuse the two URL prefixes.
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    # List v2 release group first so migrating consumers find it immediately
+    display-request-duration: true
+  group-configs:
+    - group: v2-release-api
+      display-name: "V2 Release API"
+      paths-to-match:
+        - /api/v2/**
+    - group: legacy-release-api
+      display-name: "Legacy Release API (Coexistence)"
+      paths-to-match:
+        - /quickdeploy/**
+        - /deploy
+        - /validate
+        - /datamigration/**
+        - /postRefreshTask/**
+
 logging:
   pattern:
     # Includes the MDC correlationId field so every log line is traceable to a specific request.
