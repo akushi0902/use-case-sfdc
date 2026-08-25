@@ -1,0 +1,7 @@
+{
+  "_comment": "P0 Harness fixture: valid legacy quick deploy request (POST /quickdeploy). Expects HTTP 200 SUCCESS. Confirms legacy route intact during coexistence.",
+  "deploymentRequestId": "p0-legacy-deploy-req-fixture-001",
+  "pipelineId": "p0-legacy-pipeline-fixture-001",
+  "stepId": "p0-legacy-step-fixture-001",
+  "fallbackTaskId": "p0-legacy-fallback-task-fixture-001"
+}

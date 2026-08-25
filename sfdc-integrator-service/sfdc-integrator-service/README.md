@@ -1286,3 +1286,87 @@ Test fixtures for the timeout monitor are committed under `src/test/resources/fi
 | Healthy long-running jobs being timed out | Increase `stale-threshold-minutes`. Default 240 covers 4-hour Salesforce deployments. |
 | Monitor running on only one replica but you have multiple pods | Expected — optimistic concurrency ensures concurrent scans are safe. |
 | `TIMED_OUT` jobs showing wrong diagnostic fields | Review `job_diagnostics.safe_summary` — never contains credentials or stack traces. |
+
+---
+
+## P0 Release Workflow Test Harness
+
+The P0 harness is an automated CI release gate that exercises the complete v2 release workflow
+matrix without live Salesforce orgs, Kafka brokers, PostgreSQL clusters, Git providers, or
+Kubernetes clusters. All external collaborators are mocked. It is safe to run in any environment
+that can compile the project.
+
+### What the harness covers
+
+| Test class | Scope |
+|---|---|
+| `P0ReleaseWorkflowHarnessTest` | V2 quick deploy, deploy, validate acceptance; cancellation (active, terminal, unknown); status lookup with rollback decision fields; routes-disabled enforcement; correlation ID propagation |
+| `P0LegacyCompatHarnessTest` | Legacy `/quickdeploy` (start, missing ID, stop) — confirms legacy route response shapes are not normalized to v2 contracts during coexistence |
+
+### What is mocked
+
+| External system | Mock strategy |
+|---|---|
+| Salesforce CLI | `@MockBean` on service/facade layer — no shell execution |
+| Kafka (dispatch) | `@MockBean` on `ReleaseCommandFacade` — no broker connection |
+| PostgreSQL / H2 | `@MockBean` on `JobRepository` / `JobStatusAdapter` — no database |
+| Kubernetes | Not wired into controller layer — no k8s client needed |
+| Git provider | Not wired into controller layer — no Git credentials needed |
+
+### Running locally
+
+Run only the P0 harness:
+
+```bash
+./gradlew test --tests 'com.opsera.integrator.sfdc.harness.*'
+```
+
+Run the v2 workflow harness only:
+
+```bash
+./gradlew test --tests 'com.opsera.integrator.sfdc.harness.P0ReleaseWorkflowHarnessTest'
+```
+
+Run the legacy compat harness only:
+
+```bash
+./gradlew test --tests 'com.opsera.integrator.sfdc.harness.P0LegacyCompatHarnessTest'
+```
+
+Run the full test suite (includes the P0 harness and all other tests):
+
+```bash
+./gradlew test
+```
+
+### CI release gate usage
+
+Add the harness to your CI release gate step:
+
+```yaml
+- name: P0 workflow gate
+  run: ./gradlew test --tests 'com.opsera.integrator.sfdc.harness.*' --continue
+```
+
+A non-zero exit code from this step blocks promotion of the release candidate.
+
+### Fixtures
+
+P0 harness fixtures are committed under `src/test/resources/fixtures/p0-harness/`:
+
+| Fixture | Scenario |
+|---|---|
+| `p0-quick-deploy-request.json` | Valid v2 quick deploy — all required fields present |
+| `p0-deploy-request.json` | Valid v2 deploy — all required fields present |
+| `p0-validate-request.json` | Valid v2 validate — all required fields including targetOrgId |
+| `p0-cancel-request.json` | Cancellation request with safe reason |
+| `p0-invalid-quick-deploy-missing-id.json` | Invalid quick deploy — deployRequestId absent; expects 400 |
+| `p0-legacy-quick-deploy-request.json` | Valid legacy quick deploy — expects 200 SUCCESS text/plain |
+| `p0-status-with-rollback.json` | Failed deploy status with rollback decision fields populated |
+
+### Security constraints
+
+Fixtures must not contain:
+- Real Salesforce credentials, bearer tokens, or org URLs
+- Real customer identifiers, production pipeline IDs, or deployment request IDs
+- Database connection strings, Kubernetes cluster names, or Git provider tokens

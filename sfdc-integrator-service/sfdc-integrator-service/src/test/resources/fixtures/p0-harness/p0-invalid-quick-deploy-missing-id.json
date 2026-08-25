@@ -1,0 +1,6 @@
+{
+  "_comment": "P0 Harness fixture: invalid quick deploy request — deployRequestId absent. Expects 400 VALIDATION_FAILED. Facade must NOT be called.",
+  "customerId": "p0-customer-fixture-001",
+  "sfdcToolId": "p0-sfdc-tool-fixture-001",
+  "taskId": "p0-step-qdeploy-fixture-001"
+}

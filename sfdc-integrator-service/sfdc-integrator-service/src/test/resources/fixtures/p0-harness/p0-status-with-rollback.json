@@ -1,0 +1,36 @@
+{
+  "_comment": "P0 Harness fixture: status response for a FAILED deploy with rollback decision fields populated.",
+  "jobId": "p0-status-fixture-failed-001",
+  "correlationId": "p0-corr-status-failed-001",
+  "operationType": "DEPLOY",
+  "state": "FAILED",
+  "acceptedAt": "2024-01-01T10:00:00.000Z",
+  "updatedAt": "2024-01-01T10:05:00.000Z",
+  "checkpoints": [
+    {
+      "sequenceNumber": 1,
+      "checkpointCode": "PRE_VALIDATE_OK",
+      "stateAtCheckpoint": "RUNNING",
+      "safeMessage": "Pre-validation passed",
+      "recordedAt": "2024-01-01T10:00:05.000Z"
+    },
+    {
+      "sequenceNumber": 2,
+      "checkpointCode": "DEPLOY_APPLY_ERROR",
+      "stateAtCheckpoint": "FAILED",
+      "safeMessage": "Deployment component error — partial changes applied",
+      "recordedAt": "2024-01-01T10:05:00.000Z"
+    }
+  ],
+  "safeDiagnosticSummary": "Deployment component error — partial changes applied",
+  "safeWarnings": [],
+  "statusSource": "DURABLE_LIFECYCLE",
+  "rollbackDecision": {
+    "rollbackEligible": true,
+    "rollbackRecommended": true,
+    "rollbackReasonCode": "DEPLOYMENT_PARTIAL_FAILURE",
+    "failedStage": "DEPLOYMENT",
+    "lastSuccessfulCheckpoint": "DEPLOY_APPLY_ERROR",
+    "diagnosticSummary": "Deployment component error — partial changes applied"
+  }
+}
