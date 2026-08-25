@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: package XML with unsupported metadata type (CustomLabel) — produces WARNING finding -->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>Admin</members>
+        <name>Profile</name>
+    </types>
+    <types>
+        <members>MyCustomLabel</members>
+        <members>AnotherLabel</members>
+        <!-- CustomLabel has no registered extraction strategy — will produce WARNING -->
+        <name>CustomLabel</name>
+    </types>
+    <version>58.0</version>
+</Package>

@@ -392,3 +392,10 @@
 - **Files:** 14 (+1274/-0)
 - **Duration:** 601ss
 - **Approach:** Created importable dashboard and alert definitions backed by real metric names from ReleaseLifecycleMetrics and ReleaseCoexistenceTelemetry. Dashboard covers 22 panels across 6 sections (API acceptance, release lifecycle, checkpoint freshness, status lookup, dependency health, legacy compatibility). Panels for metrics not yet emitted (SLO-02, SLO-03, SLO-04 exact metric, SLO-06 conformance) are explicitly marked PENDING with statusReason. Alert definitions cover all AC-3 categories with severity, owner, triage guidance, runbook links, and explicit incidentGuidance annotations prohibiting credential/payload embedding. PENDING alerts use always-false placeholder expressions so they cannot fire until enabled. All metric label selectors use bounded tag values only (routeVersion, operationType, outcome, endpointFamily) — no high-cardinality dimensions.
+
+## WO-154: User Story: WO-154 - Integrate Package XML Prevalidation
+- **Status:** completed
+- **Commit:** `a321eb0`
+- **Files:** 26 (+1793/-0)
+- **Duration:** 521ss
+- **Approach:** Created a new services/prevalidate package implementing a typed, XXE-safe, strategy-based prevalidation subsystem. PrevalidateComponentsService.validate(PrevalidationContext) is the public entry point for release submission flows. SafeXmlParser disables DOCTYPE, external entities, and entity expansion, plus enforces a configurable byte limit. ComponentReferenceExtractor dispatches to registered ReferenceExtractionStrategy beans (Profile, PermissionSet, Layout, Report, ApexClass) and de-duplicates members. PrevalidationResult carries FindingSeverity-classified PrevalidationFinding objects — HARD_FAILURE blocks submission, WARNING is advisory. All finding summaries use safe template strings with no raw XML, credentials, or user-supplied content. No existing code was modified.

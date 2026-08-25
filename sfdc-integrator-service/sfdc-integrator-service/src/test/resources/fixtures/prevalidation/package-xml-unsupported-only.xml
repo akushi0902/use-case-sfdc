@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: package XML with only unsupported metadata types — produces WARNING findings only -->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>MyWorkflow</members>
+        <name>Workflow</name>
+    </types>
+    <types>
+        <members>MyFlow</members>
+        <name>Flow</name>
+    </types>
+    <version>58.0</version>
+</Package>
