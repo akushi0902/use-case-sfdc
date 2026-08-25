@@ -2,6 +2,8 @@ package com.opsera.integrator.sfdc.controller.v2;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
+import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseOperationType;
 import com.opsera.integrator.sfdc.services.v2.ReleaseCommandFacade;
@@ -42,6 +44,12 @@ class ReleaseJobControllerDisabledRouteTest {
 
     @MockBean
     private ReleaseCommandFacade releaseCommandFacade;
+
+    @MockBean
+    private SafeStructuredLogger safeLogger;
+
+    @MockBean
+    private ReleaseCoexistenceTelemetry telemetry;
 
     @Test
     void submitReleaseCommand_routesDisabled_returns404WithoutDelegation() throws Exception {

@@ -4,6 +4,9 @@ import com.opsera.integrator.sfdc.correlation.CorrelationIdConstants;
 import com.opsera.integrator.sfdc.exceptions.ErrorResponse;
 import com.opsera.integrator.sfdc.exceptions.JobIdFormatException;
 import com.opsera.integrator.sfdc.exceptions.JobStatusNotFoundException;
+import com.opsera.integrator.sfdc.logging.SafeLogEvent;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
+import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseJobStatusResponse;
 import com.opsera.integrator.sfdc.services.v2.JobStatusAdapter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,9 +53,15 @@ public class ReleaseJobStatusController {
     static final Pattern SAFE_JOB_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9\\-_]+$");
 
     private final JobStatusAdapter statusAdapter;
+    private final SafeStructuredLogger safeLogger;
+    private final ReleaseCoexistenceTelemetry telemetry;
 
-    public ReleaseJobStatusController(JobStatusAdapter statusAdapter) {
+    public ReleaseJobStatusController(JobStatusAdapter statusAdapter,
+                                      SafeStructuredLogger safeLogger,
+                                      ReleaseCoexistenceTelemetry telemetry) {
         this.statusAdapter = statusAdapter;
+        this.safeLogger = safeLogger;
+        this.telemetry = telemetry;
     }
 
     /**
@@ -97,12 +106,46 @@ public class ReleaseJobStatusController {
                     required = true)
             @PathVariable String jobId) {
 
+        long startMs = System.currentTimeMillis();
         String correlationId = getCorrelationId();
         validateJobId(jobId, correlationId);
 
         return statusAdapter.findByJobId(jobId)
-                .map(ResponseEntity::ok)
-                .orElseThrow(() -> new JobStatusNotFoundException(jobId, correlationId));
+                .map(resp -> {
+                    safeLogger.logEvent(SafeLogEvent.builder()
+                            .operation("v2-release-status-query")
+                            .controller("ReleaseJobStatusController")
+                            .outcome(SafeLogEvent.Outcome.COMPLETED)
+                            .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)
+                            .safeField("operationType", resp.getOperationType() != null
+                                    ? ReleaseCoexistenceTelemetry.resolveOperationType(resp.getOperationType())
+                                    : ReleaseCoexistenceTelemetry.OPERATION_UNKNOWN)
+                            .safeField("outcome", ReleaseCoexistenceTelemetry.OUTCOME_ACCEPTED)
+                            .build());
+                    telemetry.record(ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2,
+                            resp.getOperationType() != null
+                                    ? ReleaseCoexistenceTelemetry.resolveOperationType(resp.getOperationType())
+                                    : ReleaseCoexistenceTelemetry.OPERATION_UNKNOWN,
+                            ReleaseCoexistenceTelemetry.OUTCOME_ACCEPTED,
+                            ReleaseCoexistenceTelemetry.ENDPOINT_STATUS,
+                            System.currentTimeMillis() - startMs);
+                    return ResponseEntity.ok(resp);
+                })
+                .orElseThrow(() -> {
+                    safeLogger.logEvent(SafeLogEvent.builder()
+                            .operation("v2-release-status-query")
+                            .controller("ReleaseJobStatusController")
+                            .outcome(SafeLogEvent.Outcome.REJECTED)
+                            .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)
+                            .safeField("outcome", ReleaseCoexistenceTelemetry.OUTCOME_NOT_FOUND)
+                            .build());
+                    telemetry.record(ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2,
+                            ReleaseCoexistenceTelemetry.OPERATION_UNKNOWN,
+                            ReleaseCoexistenceTelemetry.OUTCOME_NOT_FOUND,
+                            ReleaseCoexistenceTelemetry.ENDPOINT_STATUS,
+                            System.currentTimeMillis() - startMs);
+                    return new JobStatusNotFoundException(jobId, correlationId);
+                });
     }
 
     private void validateJobId(String jobId, String correlationId) {

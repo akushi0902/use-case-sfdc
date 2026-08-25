@@ -1,6 +1,9 @@
 package com.opsera.integrator.sfdc.controller.v2;
 
 import com.opsera.integrator.sfdc.exceptions.ErrorResponse;
+import com.opsera.integrator.sfdc.logging.SafeLogEvent;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
+import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
 import com.opsera.integrator.sfdc.resources.v2.release.AcceptedAcknowledgement;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.services.v2.ReleaseCommandFacade;
@@ -43,11 +46,17 @@ public class ReleaseJobController {
 
     private final ReleaseCommandFacade facade;
     private final boolean routesEnabled;
+    private final SafeStructuredLogger safeLogger;
+    private final ReleaseCoexistenceTelemetry telemetry;
 
     public ReleaseJobController(ReleaseCommandFacade facade,
-            @Value("${sfdc.v2.release.routes.enabled:true}") boolean routesEnabled) {
+            @Value("${sfdc.v2.release.routes.enabled:true}") boolean routesEnabled,
+            SafeStructuredLogger safeLogger,
+            ReleaseCoexistenceTelemetry telemetry) {
         this.facade = facade;
         this.routesEnabled = routesEnabled;
+        this.safeLogger = safeLogger;
+        this.telemetry = telemetry;
     }
 
     /**
@@ -90,11 +99,43 @@ public class ReleaseJobController {
     })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> submitReleaseCommand(@Valid @RequestBody ReleaseCommandRequest request) {
+        long startMs = System.currentTimeMillis();
+        String operationType = request.getOperationType() != null
+                ? ReleaseCoexistenceTelemetry.resolveOperationType(request.getOperationType().name())
+                : ReleaseCoexistenceTelemetry.OPERATION_UNKNOWN;
+
         if (!routesEnabled) {
+            safeLogger.logEvent(SafeLogEvent.builder()
+                    .operation("v2-release-submit")
+                    .controller("ReleaseJobController")
+                    .outcome(SafeLogEvent.Outcome.REJECTED)
+                    .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)
+                    .safeField("operationType", operationType)
+                    .safeField("outcome", ReleaseCoexistenceTelemetry.OUTCOME_DISABLED_ROUTE)
+                    .build());
+            telemetry.record(ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2, operationType,
+                    ReleaseCoexistenceTelemetry.OUTCOME_DISABLED_ROUTE,
+                    ReleaseCoexistenceTelemetry.ENDPOINT_SUBMISSION,
+                    System.currentTimeMillis() - startMs);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+
         AcceptedAcknowledgement ack = facade.accept(request);
         URI location = URI.create(ack.getStatusUrl());
+
+        safeLogger.logEvent(SafeLogEvent.builder()
+                .operation("v2-release-submit")
+                .controller("ReleaseJobController")
+                .outcome(SafeLogEvent.Outcome.ACCEPTED)
+                .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)
+                .safeField("operationType", operationType)
+                .safeField("outcome", ReleaseCoexistenceTelemetry.OUTCOME_ACCEPTED)
+                .build());
+        telemetry.record(ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2, operationType,
+                ReleaseCoexistenceTelemetry.OUTCOME_ACCEPTED,
+                ReleaseCoexistenceTelemetry.ENDPOINT_SUBMISSION,
+                System.currentTimeMillis() - startMs);
+
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .location(location)
                 .body(ack);

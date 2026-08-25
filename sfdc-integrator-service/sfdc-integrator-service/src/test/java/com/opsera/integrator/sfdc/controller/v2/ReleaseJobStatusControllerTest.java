@@ -2,6 +2,8 @@ package com.opsera.integrator.sfdc.controller.v2;
 
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.lifecycle.LifecyclePersistenceException;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
+import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseJobStatusResponse;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseLifecycleState;
 import com.opsera.integrator.sfdc.services.v2.JobStatusAdapter;
@@ -43,6 +45,12 @@ class ReleaseJobStatusControllerTest {
 
     @MockBean
     private JobStatusAdapter statusAdapter;
+
+    @MockBean
+    private SafeStructuredLogger safeLogger;
+
+    @MockBean
+    private ReleaseCoexistenceTelemetry telemetry;
 
     private ReleaseJobStatusResponse running(String jobId) {
         ReleaseJobStatusResponse r = new ReleaseJobStatusResponse();

@@ -3,6 +3,8 @@ package com.opsera.integrator.sfdc.controller.v2;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.exceptions.V2UnsupportedOperationException;
+import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
+import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
 import com.opsera.integrator.sfdc.resources.v2.release.AcceptedAcknowledgement;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseLifecycleState;
@@ -54,6 +56,12 @@ class ReleaseJobControllerTest {
 
     @MockBean
     private ReleaseCommandFacade releaseCommandFacade;
+
+    @MockBean
+    private SafeStructuredLogger safeLogger;
+
+    @MockBean
+    private ReleaseCoexistenceTelemetry telemetry;
 
     // ---- Valid submissions ----
 
