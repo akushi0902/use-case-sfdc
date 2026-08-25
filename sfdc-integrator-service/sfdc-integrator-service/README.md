@@ -212,10 +212,71 @@ Before building, ensure the following are available:
 | `checkJavaToolchain` | `check` | `sourceCompatibility` and `targetCompatibility` are Java 21 |
 | `checkNoNpmArtifacts` | `check` | No prohibited NPM artifacts in tracked source paths |
 | `verifyNpmArtifactGuard` | `check` | Self-test: guard detects prohibited files and passes clean state |
+| `validateDeployScripts` | `check` | Syntax and dry-run validation on all Kubernetes deployment scripts |
+| `checkNoChangingDependencies` | `check` | No `changing = true` or SNAPSHOT coordinates for internal Opsera artifacts |
 
 All tasks in the table above run automatically when you run `./gradlew check` or `./gradlew build`.
 
-The `validateDeployScripts` task is also wired into `check` and runs syntax and dry-run validation on all Kubernetes deployment scripts.
+---
+
+## Internal Dependency Immutability Policy
+
+All internal Opsera library dependencies must be declared with explicit, immutable release version coordinates. This policy ensures release builds are reproducible: the same source revision always produces the same application binary, and incident investigations can reconstruct the exact dependency graph used by a deployed artifact.
+
+### Pinned Internal Libraries
+
+| Coordinate | Declared Version | Required Env |
+|---|---|---|
+| `com.opsera:java-core-library` | `1.0.0` | `OPSERA_REPO_URL` |
+| `com.opsera:java-jobengine-library` | `1.0.0` | `OPSERA_REPO_URL` |
+| `com.opsera:kubernetes-client` | `1.0.0` | `OPSERA_REPO_URL` |
+| `com.opsera.salesforce:salesforce-core-lib` | `1.0.0` | `OPSERA_REPO_URL` |
+
+All four artifacts are resolved from the authenticated internal Opsera package manager (`OPSERA_REPO_URL`). If resolution fails, mirror the coordinate to the internal repository — **do not restore JCenter or add a `changing` fallback**.
+
+### Prohibited Patterns
+
+The following patterns are prohibited for internal Opsera dependencies and are detected by the `checkNoChangingDependencies` Gradle task:
+
+| Pattern | Why prohibited |
+|---|---|
+| `changing = true` | Allows artifact content to change under a cached version coordinate, making builds non-reproducible |
+| `changing: true` | Same — alternative Gradle syntax |
+| `-SNAPSHOT` version coordinate | SNAPSHOT artifacts are inherently mutable; they must not be used for release artifacts |
+
+### Bumping an Internal Library Version
+
+When a new version of an internal Opsera library is needed:
+
+1. **Confirm the new version exists** as an immutable artifact in the internal repository (`OPSERA_REPO_URL`).
+2. **Open a PR** updating the version coordinate in `build.gradle`.
+3. **Refresh the dependency lock file** (once dependency locking is enabled):
+   ```bash
+   ./gradlew dependencies --write-locks
+   ```
+4. **Commit the updated lock file** alongside the version bump — this is the verification metadata update.
+5. **Run `./gradlew checkNoChangingDependencies`** to confirm no changing declarations were introduced.
+6. **Obtain PR approval** before merging — version bumps to internal libraries require review.
+
+**Never use `changing = true` or `-SNAPSHOT` coordinates as a workaround for a missing artifact.** Contact the library owner to publish an immutable release coordinate and mirror it to the internal repository.
+
+### Verifying the Dependency Graph
+
+```bash
+# Confirm no changing or SNAPSHOT internal dependencies (runs automatically with check)
+./gradlew checkNoChangingDependencies
+
+# Inspect what Gradle resolved for a specific internal library
+./gradlew dependencyInsight --dependency java-core-library --configuration runtimeClasspath
+./gradlew dependencyInsight --dependency java-jobengine-library --configuration runtimeClasspath
+./gradlew dependencyInsight --dependency kubernetes-client --configuration runtimeClasspath
+./gradlew dependencyInsight --dependency salesforce-core-lib --configuration runtimeClasspath
+
+# Full dependency report (all configurations)
+./gradlew dependencies
+```
+
+If a missing internal artifact causes a dependency resolution failure, the build output will identify the missing coordinate and repository name. It will not expose package manager credentials.
 
 ---
 

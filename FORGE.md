@@ -91,3 +91,10 @@
 - **Files:** 5 (+285/-2)
 - **Duration:** 201ss
 - **Approach:** Inventoried SfdcIntegratorController (2 routes: POST /deploy, POST /validate) from source annotations, then created a new SfdcIntegratorControllerCompatibilityTest with 8 @WebMvcTest tests. Each route has: success-body test loading a fixture file, ArgumentCaptor-based delegation test verifying exact field values, service-exception-to-500 test verifying SfdcExceptionHandler catch-all returns 'Internal service error', and malformed-JSON-to-400 test. A contract map JSON at src/test/resources/contracts/ documents both routes with all contract details. Fixtures use synthetic identifiers and example.internal URLs only. legacy-contract-inventory.json updated to cross-reference the new test class and contract map.
+
+## WO-061: User Story: WO-061 - Pin Immutable Internal Dependencies
+- **Status:** completed
+- **Commit:** `3b058e1`
+- **Files:** 2 (+154/-6)
+- **Duration:** 393ss
+- **Approach:** Replaced the commented-out internal library placeholder in build.gradle with four explicit immutable dependency declarations (java-core-library, java-jobengine-library, kubernetes-client, salesforce-core-lib) at version 1.0.0 with no 'changing' flag. Added a checkNoChangingDependencies Gradle task wired into the check lifecycle that scans all *.gradle files for 'changing = true', 'changing: true', and -SNAPSHOT coordinates on internal Opsera groups; the task labels violations with 'changing-flag' (not 'changing=true') to avoid self-detection. Updated the README with an Internal Dependency Immutability Policy section covering the pinned library table, prohibited patterns, the version bump procedure, and verification commands.

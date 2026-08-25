@@ -104,11 +104,26 @@ dependencies {
     // Flyway 10 requires a separate artifact for each database vendor
     implementation 'org.flywaydb:flyway-database-postgresql'
 
-    // Salesforce / Opsera internal libraries (resolved from internal package manager)
-    // These coordinates must be available in OPSERA_REPO_URL.
-    // If resolution fails, mirror the artifact to the internal repository or
-    // replace it with an approved alternative — do NOT restore JCenter.
-    // implementation 'com.opsera.salesforce:opsera-sf-library:<version>'
+    // ── Internal Opsera libraries ─────────────────────────────────────────────
+    // All internal Opsera dependencies MUST use explicit, immutable release version
+    // coordinates. The 'changing' flag (changing = true) is PROHIBITED — it allows
+    // artifact content to change under an already-cached coordinate, making release
+    // builds non-reproducible and incident reconstruction unreliable.
+    //
+    // Policy (WO-061):
+    //   - Use explicit release versions (e.g. 1.0.0) not SNAPSHOT or + wildcards.
+    //   - Do NOT add 'changing = true' to any internal library declaration.
+    //   - Version bumps require explicit PR approval, lock file refresh (./gradlew
+    //     dependencies --write-locks), and verification metadata update.
+    //   - The checkNoChangingDependencies task enforces this policy on every build.
+    //
+    // Resolved from: OPSERA_REPO_URL (authenticated internal Maven repository).
+    // If resolution fails, mirror the coordinate to the internal repository — do
+    // NOT restore JCenter or add a changing fallback.
+    implementation 'com.opsera:java-core-library:1.0.0'
+    implementation 'com.opsera:java-jobengine-library:1.0.0'
+    implementation 'com.opsera:kubernetes-client:1.0.0'
+    implementation 'com.opsera.salesforce:salesforce-core-lib:1.0.0'
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -400,3 +415,75 @@ tasks.register('validateDeployScripts') {
 }
 
 check.dependsOn validateDeployScripts
+
+// ============================================================
+// Immutable Internal Dependency Guard (WO-061)
+//
+// Scans all Gradle build files for 'changing' module declarations
+// and SNAPSHOT version coordinates in internal Opsera artifacts.
+// Both patterns make release builds non-reproducible and are
+// prohibited for internal Opsera dependencies.
+//
+// Run:  ./gradlew checkNoChangingDependencies
+//
+// Policy: internal Opsera coordinates must use explicit release
+// versions only. Version bumps require an explicit PR approval,
+// a lock file refresh, and a verification metadata update.
+// ============================================================
+tasks.register('checkNoChangingDependencies') {
+    group = 'Verification'
+    description = 'Fails the build if any Gradle build file declares a changing module or ' +
+            'an internal Opsera dependency with a SNAPSHOT version. ' +
+            'Run: ./gradlew checkNoChangingDependencies'
+
+    doLast {
+        def buildFiles = fileTree(rootDir) {
+            include '**/*.gradle', '**/*.gradle.kts'
+            exclude '**/build/**'
+            exclude '**/.gradle/**'
+        }
+
+        // Pattern: changing = true  or  changing: true  in any form
+        def changingPattern = ~/changing\s*[=:]\s*true/
+        // Pattern: internal Opsera group with SNAPSHOT version
+        def snapshotInternalPattern = ~/['"](com\.opsera[^'"]*):([^'"]*-SNAPSHOT)['"]/
+
+        def violations = []
+
+        buildFiles.each { file ->
+            file.readLines().eachWithIndex { line, idx ->
+                def stripped = line.trim()
+                // Skip pure comment lines
+                if (stripped.startsWith('//') || stripped.startsWith('*') || stripped.startsWith('/*')) {
+                    return
+                }
+                if (line =~ changingPattern) {
+                    // Use hyphenated label to avoid self-matching the violation message
+                    violations << "changing-flag  ${file.path}:${idx + 1}: ${line.trim()}"
+                }
+                if (line =~ snapshotInternalPattern) {
+                    violations << "SNAPSHOT coord ${file.path}:${idx + 1}: ${line.trim()}"
+                }
+            }
+        }
+
+        if (violations) {
+            throw new GradleException(
+                "Immutable dependency policy violation: internal Opsera dependencies must use " +
+                "explicit, immutable release version coordinates.\n\n" +
+                "Prohibited patterns detected:\n" +
+                violations.collect { "  ${it}" }.join('\n') + "\n\n" +
+                "Remediation:\n" +
+                "  1. Remove the 'changing' flag from all internal Opsera dependency declarations.\n" +
+                "  2. Replace any -SNAPSHOT coordinates with pinned release versions.\n" +
+                "  3. Mirror the immutable artifact to the internal repository if not yet available.\n" +
+                "  4. Run ./gradlew dependencies --write-locks to refresh the lock file.\n" +
+                "  See README.md § Internal Dependency Immutability Policy for details."
+            )
+        } else {
+            logger.lifecycle("checkNoChangingDependencies PASSED — no changing or SNAPSHOT internal dependency declarations found.")
+        }
+    }
+}
+
+check.dependsOn checkNoChangingDependencies
