@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic fixture: valid quick-deploy async command request — no real credentials or org identifiers",
+  "operationType": "QUICK_DEPLOY",
+  "correlationId": "corr-command-fixture-qd-001",
+  "idempotencyKey": "idem-key-qd-fixture-001",
+  "pipelineId": "pipeline-command-fixture-qd-001",
+  "stepId": "step-command-fixture-qd-001",
+  "deploymentRequestId": "deploy-req-command-fixture-qd-001",
+  "customerIdHash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "sfdcToolId": "sfdc-tool-command-fixture-qd-001",
+  "dataClassification": "CONFIDENTIAL"
+}

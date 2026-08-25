@@ -947,3 +947,43 @@ Production deployments require:
 | Expired suppression blocking release | Suppression `owner` field | `@opsera/security-review` |
 
 ---
+
+## Async Command Dispatch
+
+The service provides a durable async command dispatch layer in the `command` package that ensures
+release jobs are recorded before execution begins.
+
+### Dispatcher Acceptance Guarantees
+
+1. **Durable before dispatch**: `DefaultCommandDispatcher` persists a `JobRecord` in `ACCEPTED`
+   state before invoking any execution adapter. If persistence fails, the adapter is never called.
+2. **Non-blocking handoff**: Adapters are expected to enqueue or delegate work without waiting for
+   Salesforce CLI or job-engine completion. The dispatcher returns an `AcceptedCommandOutcome`
+   immediately after the job is created and the adapter handoff is initiated.
+3. **Idempotency**: If an `AsyncCommandRequest` carries an `idempotencyKey` that matches an
+   existing job's correlation ID, the original `AcceptedCommandOutcome` is returned without
+   creating a duplicate record.
+4. **Failure semantics**: If the adapter handoff fails after the job is persisted, the lifecycle
+   service marks the job as `FAILED` with a safe reason code before the exception is propagated.
+
+### Timeout Expectations
+
+- Dispatcher `dispatch()` should complete within 500 ms under normal conditions (job persistence
+  + adapter submission).
+- Adapters must not perform synchronous Salesforce CLI, Git, or job-engine operations — these
+  belong in worker pods or async processors.
+
+### Handoff Failure Runbook
+
+| Symptom | Likely cause | Resolution |
+|---|---|---|
+| `CommandDispatchException` with reason `ADAPTER_HANDOFF_FAILURE` | Executor rejected task or service unavailable | Check adapter health; retry is safe (job in FAILED state, new request creates new job) |
+| `LifecyclePersistenceException` on dispatch | Database connectivity failure | Check DB_URL env var and connection pool; no adapter was called |
+| Duplicate `jobId` in logs | Idempotency key not supplied; parallel submissions | Supply idempotency key in repeat requests |
+
+### Legacy Coexistence
+
+The `DefaultCommandDispatcher` is a separate Spring `@Service` — the legacy
+`JobExecutionController` continues to call `QuickDeployService.start()` directly and is
+unaffected. Modernized callers or new routes may use the dispatcher to receive a full
+`AcceptedCommandOutcome` with job tracking. Both paths coexist without interference.

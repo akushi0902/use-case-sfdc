@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic fixture: quick-deploy command submitted with a caller-supplied idempotency key — used to verify duplicate-detection behavior",
+  "operationType": "QUICK_DEPLOY",
+  "correlationId": "corr-command-fixture-idem-001",
+  "idempotencyKey": "idem-key-fixture-existing-001",
+  "pipelineId": "pipeline-command-fixture-idem-001",
+  "stepId": "step-command-fixture-idem-001",
+  "deploymentRequestId": "deploy-req-command-fixture-idem-001",
+  "customerIdHash": "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+  "sfdcToolId": "sfdc-tool-command-fixture-idem-001",
+  "dataClassification": "CONFIDENTIAL"
+}
