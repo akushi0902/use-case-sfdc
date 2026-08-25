@@ -1,0 +1,15 @@
+{
+  "_comment": "Fixture: HTTP quick deploy request that arrives with a correlation header. After the controller delegates to QuickDeployService, the async service execution must carry the same correlation identifier through the thread boundary.",
+  "httpMethod": "POST",
+  "path": "/quickdeploy",
+  "headers": {
+    "X-Correlation-Id": "async-cid-propagation-fixture-001",
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "deploymentRequestId": "deploy-request-async-001",
+    "pipelineId": "pipeline-async-001",
+    "stepId": "step-async-01",
+    "fallbackTaskId": null
+  }
+}

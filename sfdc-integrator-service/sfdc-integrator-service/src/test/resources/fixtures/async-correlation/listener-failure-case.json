@@ -1,0 +1,16 @@
+{
+  "_comment": "Fixture: Kafka message representing a listener failure scenario. Even when the listener throws an exception during processing, MDC must be cleared afterward to prevent context leaking to the next message on the same pooled thread.",
+  "topic": "sfdc-progress",
+  "partition": 0,
+  "offset": 99,
+  "key": "pipeline-failure-004",
+  "headers": {
+    "X-Correlation-Id": "failure-cid-test-004"
+  },
+  "payload": {
+    "pipelineId": "pipeline-failure-004",
+    "stepId": "step-fail-01",
+    "status": "FAILED",
+    "expectedBehavior": "listener throws after restoreFromRecord — MDC must still be cleared in finally block"
+  }
+}

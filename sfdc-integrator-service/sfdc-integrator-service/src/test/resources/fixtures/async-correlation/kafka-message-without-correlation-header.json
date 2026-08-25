@@ -1,0 +1,13 @@
+{
+  "_comment": "Fixture: Kafka message from a legacy service version without correlation propagation. No X-Correlation-Id header is present. Listeners must generate a safe replacement UUID and log a degraded propagation event — the message must not be dropped.",
+  "topic": "sfdc-progress",
+  "partition": 0,
+  "offset": 7,
+  "key": "pipeline-legacy-002",
+  "headers": {},
+  "payload": {
+    "pipelineId": "pipeline-legacy-002",
+    "stepId": "step-validate-01",
+    "status": "IN_PROGRESS"
+  }
+}
