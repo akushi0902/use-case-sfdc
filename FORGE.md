@@ -77,3 +77,10 @@
 - **Files:** 3 (+501/-0)
 - **Duration:** 255ss
 - **Approach:** Created a human-readable SLO policy document and a machine-readable guardrail YAML. The SLO doc defines seven SLIs with exact measurement boundaries, nine SLO targets with thresholds and pending-measurement baselines, and five escalation/burn-rate guidance sections covering all required failure modes. The guardrail YAML provides stable identifier-keyed entries with numeric thresholds, units, severity, owner, metric hints, and rollout gate conditions. README.md gained an Operational SLOs and Guardrails section linking both files and summarising the active thresholds. No application code, test logic, API contracts, or Flyway migrations were changed.
+
+## WO-112: User Story: WO-112 - Characterize Quick Deploy Legacy Contracts
+- **Status:** completed
+- **Commit:** `d75edce`
+- **Files:** 7 (+325/-2)
+- **Duration:** 331ss
+- **Approach:** Created a new JobExecutionControllerCompatibilityTest class as a @WebMvcTest slice that loads fixture files from fixtures/quickdeploy/ and uses ArgumentCaptor to verify exact fallback normalization behavior (null → empty string) and delegation field values. The test class is distinct from the existing JobExecutionControllerTest and explicitly annotated as a characterization suite with a review gate comment. A companion compat-note document captures the preserved behaviors, review gate process, and links to the SLO guardrails and contract inventory. No production code was changed.

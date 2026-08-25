@@ -25,7 +25,8 @@
       "fixture_valid": "quick-deploy-valid-request.json",
       "fixture_no_fallback": "quick-deploy-valid-request-no-fallback.json",
       "fixture_missing_id": "quick-deploy-missing-id.json",
-      "characterization_test": "JobExecutionControllerTest#startQuickDeploy_*"
+      "characterization_test": "JobExecutionControllerTest#startQuickDeploy_*, JobExecutionControllerCompatibilityTest#startQuickDeploy_*",
+      "compat_note": "docs/operations/quick-deploy-compat-note.md"
     },
     {
       "id": "LEGACY-002",
@@ -42,7 +43,8 @@
       "delegated_service": "QuickDeployService.stop(QuickDeployStopRequest)",
       "delegation_mode": "sync acknowledgement — cancellation is forwarded to service",
       "fixture_valid": "quick-deploy-stop-request.json",
-      "characterization_test": "JobExecutionControllerTest#stopQuickDeploy_*"
+      "characterization_test": "JobExecutionControllerTest#stopQuickDeploy_*, JobExecutionControllerCompatibilityTest#stopQuickDeploy_*",
+      "compat_note": "docs/operations/quick-deploy-compat-note.md"
     },
     {
       "id": "LEGACY-003",

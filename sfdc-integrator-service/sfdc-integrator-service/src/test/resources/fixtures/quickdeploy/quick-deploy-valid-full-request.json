@@ -1,0 +1,7 @@
+{
+  "_comment": "Valid quick deploy start request with all fields present. deploymentRequestId is required; fallbackTaskId is present and must not be overwritten.",
+  "deploymentRequestId": "deploy-req-compat-001",
+  "pipelineId": "pipeline-compat-001",
+  "stepId": "step-compat-qdeploy-01",
+  "fallbackTaskId": "fallback-task-compat-001"
+}

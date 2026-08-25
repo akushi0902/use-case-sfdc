@@ -1,0 +1,5 @@
+{
+  "_comment": "Valid quick deploy stop (cancellation) request. No required fields enforced by the controller; all fields optional.",
+  "deploymentRequestId": "deploy-req-compat-001",
+  "pipelineId": "pipeline-compat-001"
+}
