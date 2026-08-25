@@ -215,6 +215,122 @@ Before building, ensure the following are available:
 
 All tasks in the table above run automatically when you run `./gradlew check` or `./gradlew build`.
 
+The `validateDeployScripts` task is also wired into `check` and runs syntax and dry-run validation on all Kubernetes deployment scripts.
+
+---
+
+## Kubernetes Deployment Baseline
+
+Deployment scripts live under `scripts/deploy/`. Each script supports a `DRY_RUN=true` mode that prints planned commands without contacting a Kubernetes cluster.
+
+### Deployment Scripts
+
+| Script | Target environment | Namespace | `latest` allowed |
+|---|---|---|---|
+| `scripts/deploy/dev-k8.sh` | Development | `sfdc-integrator-dev` | Yes (default) |
+| `scripts/deploy/test-k8.sh` | Test / staging | `sfdc-integrator-test` | No — explicit tag required |
+| `scripts/deploy/prod-k8.sh` | Production | `sfdc-integrator-prod` | No — immutable tag required |
+
+### Required Environment Variables (all environments)
+
+| Variable | Purpose |
+|---|---|
+| `IMAGE_TAG` | Container image tag to deploy |
+| `DB_URL` | JDBC connection URL for the target datasource |
+| `DB_USER` | Datasource username |
+| `DB_PASSWORD` | Datasource password — inject from CI/CD secrets, never commit |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka cluster bootstrap address(es) |
+| `KUBECONFIG` (or active context) | Access to the target Kubernetes cluster |
+| `OPSERA_REPO_URL / USER / TOKEN` | Internal package manager (build only) |
+
+All credential variables must come from your CI/CD secret store. **Never commit real values.**
+
+### Placeholder Fixture Files
+
+Committed fixture files under `scripts/deploy/fixtures/` contain non-functional placeholder values for dry-run validation and CI testing only. They must never contain real credentials, cluster names, or Salesforce credentials.
+
+| Fixture | For |
+|---|---|
+| `scripts/deploy/fixtures/dev.env.example` | dev-k8.sh dry-run |
+| `scripts/deploy/fixtures/test.env.example` | test-k8.sh dry-run |
+| `scripts/deploy/fixtures/prod.env.example` | prod-k8.sh dry-run |
+
+### Running Deployments
+
+```bash
+# Dev deployment (IMAGE_TAG defaults to 'latest')
+IMAGE_TAG=1.2.3 \
+  DB_URL=jdbc:postgresql://<host>:5432/sfdc_integrator_dev \
+  DB_USER=<user> DB_PASSWORD=<secret> \
+  KAFKA_BOOTSTRAP_SERVERS=<host>:9092 \
+  ./scripts/deploy/dev-k8.sh
+
+# Test deployment (explicit tag required)
+IMAGE_TAG=1.2.3 \
+  DB_URL=... DB_USER=... DB_PASSWORD=... KAFKA_BOOTSTRAP_SERVERS=... \
+  ./scripts/deploy/test-k8.sh
+
+# Production deployment (immutable tag required; 'latest' rejected)
+IMAGE_TAG=1.2.3 \
+  DB_URL=... DB_USER=... DB_PASSWORD=... KAFKA_BOOTSTRAP_SERVERS=... \
+  ./scripts/deploy/prod-k8.sh
+```
+
+### Dry-Run Mode
+
+Validate scripts locally without contacting a cluster:
+
+```bash
+# Single script dry-run
+DRY_RUN=true IMAGE_TAG=1.2.3 DB_URL=... DB_USER=... DB_PASSWORD=... \
+  KAFKA_BOOTSTRAP_SERVERS=... ./scripts/deploy/dev-k8.sh
+
+# Full validation suite (all scripts, syntax + dry-run using fixture values)
+./scripts/validate-deploy-scripts.sh
+
+# Same via Gradle (wired into the check lifecycle)
+./gradlew validateDeployScripts
+```
+
+### Kubernetes Spring Profile
+
+Activate the `kubernetes` Spring profile when running in cluster:
+
+```yaml
+# In your Kubernetes Deployment spec
+env:
+- name: SPRING_PROFILES_ACTIVE
+  value: kubernetes
+```
+
+The `application-kubernetes.yaml` profile configures:
+- Graceful shutdown (`server.shutdown: graceful`, 60s timeout)
+- Kafka bootstrap server from `KAFKA_BOOTSTRAP_SERVERS`
+- Kubernetes health probes (`/actuator/health/liveness`, `/actuator/health/readiness`)
+- Flyway, metrics, and info actuator endpoints exposed
+
+### Rollback
+
+```bash
+kubectl rollout undo deployment/sfdc-integrator-service -n <namespace>
+kubectl rollout status deployment/sfdc-integrator-service -n <namespace>
+```
+
+### Monitoring Deployment
+
+```bash
+kubectl rollout status deployment/sfdc-integrator-service -n <namespace>
+kubectl logs -l app=sfdc-integrator-service -n <namespace> --tail=100
+kubectl get pods -l app=sfdc-integrator-service -n <namespace>
+```
+
+### Deployment Safety Rules
+
+- Production deployments require an approved change ticket.
+- `IMAGE_TAG=latest` is rejected for test and production environments.
+- All credential variables must be absent from pod logs (`DB_PASSWORD`, `OPSERA_REPO_TOKEN`).
+- Dry-run must pass in CI before a live deployment is triggered.
+
 ---
 
 ## Database Migrations (Flyway)

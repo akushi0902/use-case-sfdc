@@ -56,3 +56,10 @@
 - **Files:** 6 (+221/-1)
 - **Duration:** 389ss
 - **Approach:** Added Flyway 10.x + PostgreSQL JDBC as a low-blast-radius platform layer. Production datasource requires DB_URL/DB_USER/DB_PASSWORD env vars — missing any causes a clear startup failure. Tests use H2 in PostgreSQL compatibility mode via the existing 'test' profile; Flyway is disabled by default in that profile so existing @SpringBootTest controller/filter tests are unaffected. MigrationFoundationTest re-enables Flyway via @TestPropertySource to prove migration execution without external infrastructure. No legacy controller behavior was changed.
+
+## WO-109: User Story: WO-109 - Baseline Kubernetes Deployment Scripts
+- **Status:** completed
+- **Commit:** `51ab9bd`
+- **Files:** 10 (+717/-11)
+- **Duration:** 503ss
+- **Approach:** Added DRY_RUN support, require_var(), and run_cmd() helpers to all three existing deploy scripts without changing live behavior. Created placeholder fixture files for each environment. Implemented a CI-safe validate-deploy-scripts.sh that runs bash syntax checks, fixture variable coverage checks, dry-run execution with banner verification, and missing-variable fail-fast checks — verified locally with all 36 checks passing. Added validateDeployScripts Gradle task wired into the check lifecycle. Created application-kubernetes.yaml Spring profile with graceful shutdown, Kafka bootstrap from env var, health probes, and Hazelcast discovery documentation anchor. Updated README.md with a comprehensive Kubernetes Deployment Baseline section.

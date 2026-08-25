@@ -10,9 +10,25 @@
 #   - OPSERA_REPO_URL, OPSERA_REPO_USER, OPSERA_REPO_TOKEN set in environment
 #   - IMAGE_TAG set to the target container image tag (default: latest)
 #   - kubectl and helm available in PATH
+#   - DB_URL, DB_USER, DB_PASSWORD set for the dev datasource
+#   - KAFKA_BOOTSTRAP_SERVERS set for the dev Kafka cluster
 #
 # Usage:
 #   IMAGE_TAG=1.2.3 ./scripts/deploy/dev-k8.sh
+#
+# Dry-run mode (syntax and variable validation only, no cluster contact):
+#   DRY_RUN=true IMAGE_TAG=1.2.3 ./scripts/deploy/dev-k8.sh
+#
+# Required variables:
+#   IMAGE_TAG              — container image tag (default: latest for dev)
+#   DB_URL                 — JDBC URL for dev datasource
+#   DB_USER                — dev datasource username
+#   DB_PASSWORD            — dev datasource password
+#   KAFKA_BOOTSTRAP_SERVERS — Kafka bootstrap servers for dev
+#   KUBECONFIG (or active context) — access to the dev cluster
+#
+# Environment variables that must NEVER appear in output:
+#   OPSERA_REPO_TOKEN, OPSERA_REPO_USER, DB_PASSWORD
 
 set -euo pipefail
 
@@ -23,8 +39,61 @@ ENVIRONMENT="dev"
 NAMESPACE="sfdc-integrator-dev"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 JAVA_VERSION_REQUIRED="21"
+DRY_RUN="${DRY_RUN:-false}"
 
-# Verify build prerequisites
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+# require_var <VAR_NAME>
+# Fails with a clear message if the named variable is unset or blank.
+# Never prints the variable value — only the name.
+require_var() {
+    local name="$1"
+    local value="${!name:-}"
+    if [ -z "${value}" ]; then
+        echo "ERROR [deploy:${ENVIRONMENT}]: required variable '${name}' is not set or is blank." >&2
+        echo "  Set ${name} in your environment before running this script." >&2
+        echo "  See scripts/deploy/fixtures/dev.env.example for placeholder reference." >&2
+        exit 1
+    fi
+}
+
+# run_cmd [command...]
+# In live mode: executes the command.
+# In dry-run mode: prints the command without executing it.
+run_cmd() {
+    if [ "${DRY_RUN}" = "true" ]; then
+        echo "[DRY-RUN:${ENVIRONMENT}] $*"
+    else
+        "$@"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Dry-run banner
+# ---------------------------------------------------------------------------
+
+if [ "${DRY_RUN}" = "true" ]; then
+    echo "[deploy:${ENVIRONMENT}] DRY-RUN MODE — no cluster changes will be made."
+    echo "[deploy:${ENVIRONMENT}] Validating required variables and printing planned commands."
+fi
+
+# ---------------------------------------------------------------------------
+# Required variable validation
+# ---------------------------------------------------------------------------
+
+require_var "DB_URL"
+require_var "DB_USER"
+require_var "DB_PASSWORD"
+require_var "KAFKA_BOOTSTRAP_SERVERS"
+
+echo "[deploy:${ENVIRONMENT}] Required variable checks passed."
+
+# ---------------------------------------------------------------------------
+# Java runtime check
+# ---------------------------------------------------------------------------
+
 echo "[deploy:${ENVIRONMENT}] Verifying Java runtime requirement..."
 if command -v java >/dev/null 2>&1; then
     JAVA_VERSION=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d'.' -f1)
@@ -37,17 +106,25 @@ if command -v java >/dev/null 2>&1; then
     fi
 fi
 
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+
 echo "[deploy:${ENVIRONMENT}] Building application JAR with Java ${JAVA_VERSION_REQUIRED} toolchain..."
-cd "${SERVICE_DIR}"
-./gradlew bootJar --no-daemon \
-    -Dorg.gradle.java.home="${JAVA_HOME:-}" \
-    2>&1 | grep -v "OPSERA_REPO_TOKEN\|OPSERA_REPO_USER"
+run_cmd bash -c "cd '${SERVICE_DIR}' && ./gradlew bootJar --no-daemon \
+    -Dorg.gradle.java.home='${JAVA_HOME:-}' \
+    2>&1 | grep -v 'OPSERA_REPO_TOKEN\|OPSERA_REPO_USER'"
+
+# ---------------------------------------------------------------------------
+# Deploy
+# ---------------------------------------------------------------------------
 
 echo "[deploy:${ENVIRONMENT}] Deploying to namespace: ${NAMESPACE}, image tag: ${IMAGE_TAG}"
 echo "[deploy:${ENVIRONMENT}] Java runtime in container: eclipse-temurin:${JAVA_VERSION_REQUIRED}-jre"
+echo "[deploy:${ENVIRONMENT}] Kafka: ${KAFKA_BOOTSTRAP_SERVERS}"
 
 # Apply Kubernetes manifests (paths are relative to project root)
-# kubectl apply -f k8s/dev/ -n "${NAMESPACE}"
+run_cmd kubectl apply -f k8s/dev/ -n "${NAMESPACE}"
 
 echo "[deploy:${ENVIRONMENT}] Deployment complete. Verify pod startup with:"
 echo "  kubectl rollout status deployment/sfdc-integrator-service -n ${NAMESPACE}"

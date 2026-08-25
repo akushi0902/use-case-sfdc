@@ -359,3 +359,44 @@ tasks.register('verifyNpmArtifactGuard') {
 }
 
 check.dependsOn verifyNpmArtifactGuard
+
+// ============================================================
+// Kubernetes Deployment Script Validation
+//
+// Run this task to validate all Kubernetes deployment scripts:
+//   ./gradlew validateDeployScripts
+//
+// Performs bash syntax checks and dry-run execution of each
+// deploy script (dev-k8.sh, test-k8.sh, prod-k8.sh) using
+// committed placeholder fixture values. No cluster contact.
+// Wired into the check lifecycle.
+// ============================================================
+tasks.register('validateDeployScripts') {
+    group = 'Verification'
+    description = 'Validates Kubernetes deployment scripts with syntax checks and dry-run execution. ' +
+            'Run: ./gradlew validateDeployScripts'
+
+    doLast {
+        def validationScript = new File(rootDir, 'scripts/validate-deploy-scripts.sh')
+        if (!validationScript.exists()) {
+            throw new GradleException(
+                "validateDeployScripts: validation script not found at ${validationScript.path}.\n" +
+                "Ensure scripts/validate-deploy-scripts.sh is committed."
+            )
+        }
+        def result = exec {
+            commandLine 'bash', validationScript.absolutePath
+            workingDir rootDir
+            ignoreExitValue = true
+        }
+        if (result.exitValue != 0) {
+            throw new GradleException(
+                "validateDeployScripts FAILED — one or more deployment script checks failed.\n" +
+                "Run ./gradlew validateDeployScripts for detailed output."
+            )
+        }
+        logger.lifecycle("validateDeployScripts PASSED — all deployment scripts passed syntax and dry-run checks.")
+    }
+}
+
+check.dependsOn validateDeployScripts
