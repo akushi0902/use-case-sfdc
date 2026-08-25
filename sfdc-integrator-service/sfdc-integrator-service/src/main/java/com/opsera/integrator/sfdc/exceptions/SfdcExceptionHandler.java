@@ -85,6 +85,16 @@ public class SfdcExceptionHandler {
                         "Set Content-Type to application/json"));
     }
 
+    @ExceptionHandler(V2UnsupportedOperationException.class)
+    public ResponseEntity<ErrorResponse> handleV2UnsupportedOperation(V2UnsupportedOperationException ex) {
+        String correlationId = getCorrelationId();
+        log.warn("Unsupported v2 operation: type={} correlationId={}", ex.getOperationType(), correlationId);
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new ErrorResponse(correlationId, "UNSUPPORTED_OPERATION",
+                        "Operation type " + ex.getOperationType() + " is not supported by this endpoint",
+                        "Supported operation types: DEPLOY, VALIDATE, QUICK_DEPLOY"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         String correlationId = getCorrelationId();

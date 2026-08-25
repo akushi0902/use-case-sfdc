@@ -24,6 +24,13 @@ spring:
     out-of-order: false
 
 sfdc:
+  v2:
+    release:
+      routes:
+        # Enable or disable the v2 release route family (/api/v2/sfdc/release-jobs).
+        # Set to false for canary rollback without affecting legacy routes.
+        enabled: true
+
   governance:
     classification:
       # Maps each GovernanceDataCategory to a DataClassification tier.
