@@ -25,6 +25,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -108,7 +109,7 @@ class SfdcIntegratorControllerCompatibilityTest {
     }
 
     @Test
-    @DisplayName("SFDC-001: service exception on deploy returns HTTP 500 with safe body — no stack trace")
+    @DisplayName("SFDC-001: service exception on deploy returns HTTP 500 with structured safe body — no stack trace")
     void deploy_serviceThrowsException_returns500WithSafeBody() throws Exception {
         doThrow(new RuntimeException("simulated-deploy-failure"))
                 .when(sfdcIntegratorService).deploy(any(DeployRequest.class));
@@ -117,17 +118,18 @@ class SfdcIntegratorControllerCompatibilityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(fixture("sfdc-integrator-deploy-request.json")))
                 .andExpect(status().isInternalServerError())
-                .andExpect(content().string("Internal service error"));
+                .andExpect(jsonPath("$.errorCode").value("INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.message").value("Internal service error"));
     }
 
     @Test
-    @DisplayName("SFDC-001: malformed JSON body returns HTTP 400 with SfdcExceptionHandler body — service not called")
+    @DisplayName("SFDC-001: malformed JSON body returns HTTP 400 with structured SfdcExceptionHandler body — service not called")
     void deploy_malformedJson_returns400WithExceptionHandlerBody() throws Exception {
         mockMvc.perform(post("/deploy")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ not json"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("Malformed request body"));
+                .andExpect(jsonPath("$.errorCode").value("MALFORMED_REQUEST_BODY"));
 
         verify(sfdcIntegratorService, never()).deploy(any());
     }
@@ -162,7 +164,7 @@ class SfdcIntegratorControllerCompatibilityTest {
     }
 
     @Test
-    @DisplayName("SFDC-002: service exception on validate returns HTTP 500 with safe body — no stack trace")
+    @DisplayName("SFDC-002: service exception on validate returns HTTP 500 with structured safe body — no stack trace")
     void validate_serviceThrowsException_returns500WithSafeBody() throws Exception {
         doThrow(new RuntimeException("simulated-validate-failure"))
                 .when(sfdcIntegratorService).validate(any(DeployRequest.class));
@@ -171,17 +173,18 @@ class SfdcIntegratorControllerCompatibilityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(fixture("sfdc-integrator-validate-request.json")))
                 .andExpect(status().isInternalServerError())
-                .andExpect(content().string("Internal service error"));
+                .andExpect(jsonPath("$.errorCode").value("INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.message").value("Internal service error"));
     }
 
     @Test
-    @DisplayName("SFDC-002: malformed JSON body returns HTTP 400 with SfdcExceptionHandler body — service not called")
+    @DisplayName("SFDC-002: malformed JSON body returns HTTP 400 with structured SfdcExceptionHandler body — service not called")
     void validate_malformedJson_returns400WithExceptionHandlerBody() throws Exception {
         mockMvc.perform(post("/validate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("not json"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("Malformed request body"));
+                .andExpect(jsonPath("$.errorCode").value("MALFORMED_REQUEST_BODY"));
 
         verify(sfdcIntegratorService, never()).validate(any());
     }

@@ -1,14 +1,17 @@
 package com.opsera.integrator.sfdc.model;
 
+import jakarta.validation.constraints.NotBlank;
+
 /**
  * Request DTO for the legacy quick deploy start operation.
  *
- * <p>{@code deploymentRequestId} is the only required field; the controller
- * rejects requests where it is absent or blank. {@code fallbackTaskId} is
- * normalized to an empty string by the controller when the caller omits it.
+ * <p>{@code deploymentRequestId} is required; absent or blank values are rejected
+ * by Jakarta Bean Validation before controller logic runs. {@code fallbackTaskId}
+ * is normalized to an empty string by the controller when the caller omits it.
  */
 public class QuickDeployRequest {
 
+    @NotBlank(message = "deploymentRequestId is required")
     private String deploymentRequestId;
     private String pipelineId;
     private String stepId;

@@ -98,3 +98,10 @@
 - **Files:** 2 (+154/-6)
 - **Duration:** 393ss
 - **Approach:** Replaced the commented-out internal library placeholder in build.gradle with four explicit immutable dependency declarations (java-core-library, java-jobengine-library, kubernetes-client, salesforce-core-lib) at version 1.0.0 with no 'changing' flag. Added a checkNoChangingDependencies Gradle task wired into the check lifecycle that scans all *.gradle files for 'changing = true', 'changing: true', and -SNAPSHOT coordinates on internal Opsera groups; the task labels violations with 'changing-flag' (not 'changing=true') to avoid self-detection. Updated the README with an Internal Dependency Immutability Policy section covering the pinned library table, prohibited patterns, the version bump procedure, and verification commands.
+
+## WO-114: User Story: WO-114 - Normalize Boundary Error Responses
+- **Status:** completed
+- **Commit:** `71d0ea7`
+- **Files:** 15 (+640/-54)
+- **Duration:** 838ss
+- **Approach:** Created ErrorResponse (correlationId, errorCode, message, remediation, timestamp, fieldErrors) and SafeFieldError (field, rejectedReason, safeMessage — no raw rejected value) in the exceptions package. Replaced SfdcExceptionHandler plain-string responses with structured ErrorResponse JSON for all exception types: MethodArgumentNotValidException and ConstraintViolationException (400 VALIDATION_FAILED with field errors), HttpMessageNotReadableException (400 MALFORMED_REQUEST_BODY or MISSING_REQUEST_BODY), HttpMediaTypeNotSupportedException (400 UNSUPPORTED_MEDIA_TYPE), and Exception catch-all (500 INTERNAL_ERROR). Added @NotBlank to QuickDeployRequest.deploymentRequestId and @Valid to JobExecutionController.startQuickDeploy, removing the manual null/blank check in favour of Jakarta Bean Validation. Correlation ID is read from MDC via CorrelationIdConstants.MDC_KEY in every handler. Updated all existing tests that asserted old plain-string error bodies to assert the new structured JSON format using jsonPath. Added 13 unit tests in SfdcExceptionHandlerTest and 7 MVC integration tests in JobExecutionControllerBoundaryTest. Added five fixture files covering all AC-7 scenarios.

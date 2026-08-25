@@ -6,6 +6,7 @@ import com.opsera.integrator.sfdc.governance.classification.GovernanceDataCatego
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -27,8 +28,9 @@ import org.springframework.web.bind.annotation.RestController;
  * after delegating to the {@link QuickDeployService}. Long-running Salesforce execution
  * proceeds asynchronously after acknowledgement.
  *
- * <p>Note: input validation is performed explicitly inside the handler methods rather
- * than through {@code @Valid} annotations, matching current legacy behavior.
+ * <p>Input validation on {@code startQuickDeploy} is enforced via Jakarta Bean Validation
+ * ({@code @Valid}); invalid requests throw {@code MethodArgumentNotValidException} which
+ * is mapped to a structured 400 response by {@code SfdcExceptionHandler}.
  */
 @RestController
 @RequestMapping("/quickdeploy")
@@ -37,7 +39,6 @@ public class JobExecutionController {
     private static final Logger log = LoggerFactory.getLogger(JobExecutionController.class);
 
     static final String SUCCESS = "SUCCESS";
-    static final String ERR_MISSING_DEPLOYMENT_ID = "deploymentRequestId is required";
 
     private final QuickDeployService quickDeployService;
     private final ClassificationPolicyResolver classificationResolver;
@@ -51,22 +52,17 @@ public class JobExecutionController {
     /**
      * Starts a quick deploy job.
      *
-     * <p>Rejects requests where {@code deploymentRequestId} is absent or blank.
+     * <p>Jakarta Bean Validation rejects requests where {@code deploymentRequestId}
+     * is absent or blank before this method is invoked.
      * Normalizes a null {@code fallbackTaskId} to an empty string before delegation.
      */
     @PostMapping
-    public ResponseEntity<String> startQuickDeploy(@RequestBody QuickDeployRequest request) {
+    public ResponseEntity<String> startQuickDeploy(@Valid @RequestBody QuickDeployRequest request) {
         ClassificationContext ctx = classificationResolver.resolve(
                 GovernanceDataCategory.JOB_METADATA, "quick-deploy-start");
         if (ctx != null) {
             log.debug("Quick deploy start received: operation={}, classification={}",
                     ctx.getOperationName(), ctx.getClassification());
-        }
-
-        if (request.getDeploymentRequestId() == null
-                || request.getDeploymentRequestId().isBlank()) {
-            log.warn("Quick deploy start rejected: deploymentRequestId is missing");
-            return ResponseEntity.badRequest().body(ERR_MISSING_DEPLOYMENT_ID);
         }
 
         // Normalize optional fallback field so downstream code never sees null

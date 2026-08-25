@@ -25,6 +25,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -142,13 +143,15 @@ class JobExecutionControllerCompatibilityTest {
     }
 
     @Test
-    @DisplayName("LEGACY-001: missing deploymentRequestId returns HTTP 400 with exact error body")
+    @DisplayName("LEGACY-001: missing deploymentRequestId returns HTTP 400 with structured error body")
     void startQuickDeploy_missingDeploymentId_returns400WithExactErrorBody() throws Exception {
         mockMvc.perform(post("/quickdeploy")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(fixture("quick-deploy-missing-id-request.json")))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("deploymentRequestId is required"));
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("deploymentRequestId"))
+                .andExpect(jsonPath("$.fieldErrors[0].safeMessage").value("deploymentRequestId is required"));
 
         verify(quickDeployService, never()).start(org.mockito.ArgumentMatchers.any());
     }
@@ -163,19 +166,20 @@ class JobExecutionControllerCompatibilityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(blankIdRequest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("deploymentRequestId is required"));
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("deploymentRequestId"));
 
         verify(quickDeployService, never()).start(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
-    @DisplayName("LEGACY-001: malformed JSON body returns HTTP 400 with SfdcExceptionHandler body")
+    @DisplayName("LEGACY-001: malformed JSON body returns HTTP 400 with structured SfdcExceptionHandler body")
     void startQuickDeploy_malformedJson_returns400WithExceptionHandlerBody() throws Exception {
         mockMvc.perform(post("/quickdeploy")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ not valid json"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("Malformed request body"));
+                .andExpect(jsonPath("$.errorCode").value("MALFORMED_REQUEST_BODY"));
 
         verify(quickDeployService, never()).start(org.mockito.ArgumentMatchers.any());
     }
@@ -211,13 +215,13 @@ class JobExecutionControllerCompatibilityTest {
     }
 
     @Test
-    @DisplayName("LEGACY-002: malformed JSON body returns HTTP 400 with SfdcExceptionHandler body")
+    @DisplayName("LEGACY-002: malformed JSON body returns HTTP 400 with structured SfdcExceptionHandler body")
     void stopQuickDeploy_malformedJson_returns400WithExceptionHandlerBody() throws Exception {
         mockMvc.perform(post("/quickdeploy/stop")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("not json"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string("Malformed request body"));
+                .andExpect(jsonPath("$.errorCode").value("MALFORMED_REQUEST_BODY"));
 
         verify(quickDeployService, never()).stop(org.mockito.ArgumentMatchers.any());
     }
