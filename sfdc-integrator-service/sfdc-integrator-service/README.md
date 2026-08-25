@@ -674,6 +674,90 @@ Baselines marked _pending_ have not yet been established by production telemetry
 
 ---
 
+## Test Fixture Masking Convention
+
+All compliance-sensitive test fixtures must use **synthetic, deterministic values** generated
+by `SyntheticFixtureFactory` (in `src/test/java/...sfdc/fixtures/`). Real customer names,
+Salesforce org identifiers, usernames, emails, tokens, connection strings, or production URLs
+must never appear in committed test resources.
+
+### Allowed Domains and Prefixes
+
+| Field type | Safe pattern | Example |
+|---|---|---|
+| Customer ID hash | 64-char lowercase hex | `0000…0000` or `sha256(salt:customer:seed)` |
+| Pipeline / step / task ID | `<type>-fixture-<12hex>` | `pipeline-fixture-b2c3d4e5f6a1` |
+| Correlation ID | `cid-fixture-<12hex>` | `cid-fixture-a1b2c3d4e5f6` |
+| Deployment request ID | `deploy-req-fixture-<12hex>` | `deploy-req-fixture-c3d4e5f6a1b2` |
+| Job ID | `job-fixture-<12hex>` | `job-fixture-d4e5f6a1b2c3` |
+| Email address | `user-<hash>@fixture.example.internal` | `user-abc123@fixture.example.internal` |
+| Source / target org URL | `https://source-<hash>.org.fixture.example.internal` | See factory |
+| API token placeholder | `tok-fixture-<24hex>` (no dots) | `tok-fixture-a1b2c3d4e5f6c7d8e9f0a1b2` |
+| Salesforce org ref | `00Dfixture<UPPERCASE-HASH>` | `00DfixtureA1B2C3D4E5F6` |
+| Report sample ref | `report-fixture-<12hex>` | `report-fixture-e5f6a1b2c3d4` |
+| Username | `fixture-user-<12hex>` | `fixture-user-c3d4e5f6a1b2` |
+
+### Safe Fixture JSON Files
+
+Sanitized JSON fixture files for common scenarios are committed under
+`src/test/resources/fixtures/pii-masking/`:
+
+| File | Scenario |
+|---|---|
+| `masked-quick-deploy-request.json` | Quick deploy pipeline step |
+| `masked-data-migration-request.json` | Data migration with source/target org URLs |
+| `masked-post-refresh-request.json` | Post-refresh task |
+| `masked-audit-event.json` | Audit event with actor ref and org ref |
+| `masked-retention-metadata.json` | Retention metadata with customer ID hash |
+| `masked-purge-scenario.json` | Purge scenario with retention category |
+
+### Controller Log Field Allow-List
+
+Controllers must only include the following fields in `SafeLogEvent.safeFields`:
+
+| Controller | Allowed safe fields |
+|---|---|
+| `DataMigrationController` | `pipelineId`, `stepId` |
+| `PostRefreshTaskController` | `pipelineId`, `stepId` |
+| `JobExecutionController` | `pipelineId`, `stepId` |
+
+Org URLs (`sourceOrgUrl`, `targetOrgUrl`), raw DTO toString, customer hashes, and bearer
+tokens must never appear in logged safe fields.
+
+### Fixture Safety Scan
+
+`FixtureSafetyScanTest` runs automatically as part of `./gradlew test` and fails if any
+file under `src/test/resources/fixtures/`, `src/test/resources/contracts/`, or `README.md`
+contains:
+
+- A JWT signature pattern (`eyJ…`)
+- A PEM private key header (`BEGIN PRIVATE KEY`)
+- A Salesforce production domain (`.salesforce.com`, `.force.com`)
+- A bearer token with a 40+ character value
+- A real email address (non-`.internal`, non-`.example.*` domain)
+
+Failure output names the **file path and pattern category only** — matched values are never
+echoed to prevent secrets appearing in CI logs.
+
+### Generating Fixture Values in Tests
+
+```java
+import com.opsera.integrator.sfdc.fixtures.SyntheticFixtureFactory;
+
+// Deterministic values — same seed always produces the same output
+String pipelineId = SyntheticFixtureFactory.pipelineId("my-test-scenario");
+String stepId     = SyntheticFixtureFactory.stepId("my-test-scenario");
+String sourceUrl  = SyntheticFixtureFactory.sourceOrgUrl("my-test-scenario");
+String email      = SyntheticFixtureFactory.email("user-seed");
+String token      = SyntheticFixtureFactory.token("service-seed");
+```
+
+Null and blank seeds return clearly synthetic placeholders (never null). The factory uses
+a fixed, non-secret test salt (`sfdc-test-fixture-v1`) that must not be used in any
+production hashing or masking operation.
+
+---
+
 ## Java 21 Toolchain Troubleshooting
 
 | Symptom | Cause | Resolution |
