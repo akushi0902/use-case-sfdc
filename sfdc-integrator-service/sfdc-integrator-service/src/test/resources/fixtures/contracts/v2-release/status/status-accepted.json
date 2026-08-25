@@ -1,0 +1,14 @@
+{
+  "_comment": "Synthetic fixture: job accepted, no checkpoints yet. Worker dispatch pending.",
+  "jobId": "job-status-fixture-accepted-001",
+  "correlationId": "corr-status-fixture-accepted-001",
+  "operationType": "QUICK_DEPLOY",
+  "state": "ACCEPTED",
+  "acceptedAt": "2024-01-01T10:00:00.000Z",
+  "updatedAt": "2024-01-01T10:00:00.000Z",
+  "checkpoints": [],
+  "safeDiagnosticSummary": null,
+  "resultReference": null,
+  "safeWarnings": [],
+  "statusSource": "DURABLE_LIFECYCLE"
+}

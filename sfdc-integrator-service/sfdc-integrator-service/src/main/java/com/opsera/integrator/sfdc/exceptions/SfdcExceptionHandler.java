@@ -1,6 +1,7 @@
 package com.opsera.integrator.sfdc.exceptions;
 
 import com.opsera.integrator.sfdc.correlation.CorrelationIdConstants;
+import com.opsera.integrator.sfdc.lifecycle.LifecyclePersistenceException;
 import com.opsera.integrator.sfdc.security.ShellArgumentViolationException;
 import com.opsera.integrator.sfdc.exceptions.ScopeAuthorizationException;
 import jakarta.validation.ConstraintViolationException;
@@ -134,6 +135,37 @@ public class SfdcExceptionHandler {
                 .body(new ErrorResponse(correlationId, "UNSUPPORTED_OPERATION",
                         "Operation type " + ex.getOperationType() + " is not supported by this endpoint",
                         "Supported operation types: DEPLOY, VALIDATE, QUICK_DEPLOY"));
+    }
+
+    @ExceptionHandler(JobStatusNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleJobStatusNotFound(JobStatusNotFoundException ex) {
+        String correlationId = ex.getCorrelationId() != null ? ex.getCorrelationId() : getCorrelationId();
+        log.warn("Job status not found: correlationId={}", correlationId);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(correlationId, "JOB_NOT_FOUND",
+                        "No release job found with the specified identifier",
+                        "Verify the jobId returned by the submission endpoint and retry"));
+    }
+
+    @ExceptionHandler(JobIdFormatException.class)
+    public ResponseEntity<ErrorResponse> handleJobIdFormat(JobIdFormatException ex) {
+        String correlationId = ex.getCorrelationId() != null ? ex.getCorrelationId() : getCorrelationId();
+        log.warn("Malformed job identifier: correlationId={}, reason={}", correlationId, ex.getRejectionReason());
+        ErrorResponse response = new ErrorResponse(correlationId, "MALFORMED_JOB_ID",
+                "Job identifier format validation failed",
+                "Job identifiers must be alphanumeric with hyphens and underscores, maximum 128 characters");
+        response.addFieldError(new SafeFieldError("jobId", "malformed-job-id", ex.getRejectionReason()));
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(LifecyclePersistenceException.class)
+    public ResponseEntity<ErrorResponse> handleLifecyclePersistence(LifecyclePersistenceException ex) {
+        String correlationId = getCorrelationId();
+        log.error("Status source unavailable: correlationId={}, message={}", correlationId, ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse(correlationId, "STATUS_SOURCE_UNAVAILABLE",
+                        "Job status source is temporarily unavailable",
+                        "Retry after a short delay; contact the service owner if the problem persists"));
     }
 
     @ExceptionHandler(Exception.class)

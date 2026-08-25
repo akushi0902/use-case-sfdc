@@ -1,0 +1,7 @@
+{
+  "_comment": "Synthetic fixture: structured 404 response for an unknown (well-formed) job ID.",
+  "correlationId": "corr-status-fixture-notfound-001",
+  "errorCode": "JOB_NOT_FOUND",
+  "message": "No release job found with the specified identifier",
+  "remediation": "Verify the jobId returned by the submission endpoint and retry"
+}

@@ -1,0 +1,29 @@
+{
+  "_comment": "Synthetic fixture: job cancelled by operator before completion.",
+  "jobId": "job-status-fixture-cancelled-001",
+  "correlationId": "corr-status-fixture-cancelled-001",
+  "operationType": "VALIDATE",
+  "state": "CANCELLED",
+  "acceptedAt": "2024-01-01T10:00:00.000Z",
+  "updatedAt": "2024-01-01T10:01:30.000Z",
+  "checkpoints": [
+    {
+      "sequenceNumber": 1,
+      "checkpointCode": "WORKER_STARTED",
+      "stateAtCheckpoint": "RUNNING",
+      "safeMessage": "Worker pod started execution",
+      "recordedAt": "2024-01-01T10:00:05.000Z"
+    },
+    {
+      "sequenceNumber": 2,
+      "checkpointCode": "JOB_CANCELLED",
+      "stateAtCheckpoint": "CANCELLED",
+      "safeMessage": "Job cancelled by operator",
+      "recordedAt": "2024-01-01T10:01:30.000Z"
+    }
+  ],
+  "safeDiagnosticSummary": "Job cancelled by operator",
+  "resultReference": null,
+  "safeWarnings": [],
+  "statusSource": "DURABLE_LIFECYCLE"
+}
