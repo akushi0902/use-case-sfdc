@@ -6,6 +6,8 @@ import com.opsera.integrator.sfdc.exceptions.ErrorResponse;
 import com.opsera.integrator.sfdc.logging.SafeLogEvent;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
+import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionAdapter;
+import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.AcceptedAcknowledgement;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.services.v2.ReleaseCommandFacade;
@@ -62,15 +64,18 @@ public class ReleaseJobController {
     private final V2ReleaseRoutesProperties routesProperties;
     private final SafeStructuredLogger safeLogger;
     private final ReleaseCoexistenceTelemetry telemetry;
+    private final QuickDeploySubmissionAdapter quickDeployAdapter;
 
     public ReleaseJobController(ReleaseCommandFacade facade,
             V2ReleaseRoutesProperties routesProperties,
             SafeStructuredLogger safeLogger,
-            ReleaseCoexistenceTelemetry telemetry) {
+            ReleaseCoexistenceTelemetry telemetry,
+            QuickDeploySubmissionAdapter quickDeployAdapter) {
         this.facade = facade;
         this.routesProperties = routesProperties;
         this.safeLogger = safeLogger;
         this.telemetry = telemetry;
+        this.quickDeployAdapter = quickDeployAdapter;
     }
 
     /**
@@ -136,6 +141,81 @@ public class ReleaseJobController {
 
         safeLogger.logEvent(SafeLogEvent.builder()
                 .operation("v2-release-submit")
+                .controller("ReleaseJobController")
+                .outcome(SafeLogEvent.Outcome.ACCEPTED)
+                .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)
+                .safeField("operationType", operationType)
+                .safeField("outcome", ReleaseCoexistenceTelemetry.OUTCOME_ACCEPTED)
+                .build());
+        telemetry.record(ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2, operationType,
+                ReleaseCoexistenceTelemetry.OUTCOME_ACCEPTED,
+                ReleaseCoexistenceTelemetry.ENDPOINT_SUBMISSION,
+                System.currentTimeMillis() - startMs);
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .location(location)
+                .body(ack);
+    }
+
+    /**
+     * Submits a quick deploy command via the dedicated v2 quick-deploy path.
+     *
+     * <p>The dedicated endpoint accepts a focused DTO with {@code deployRequestId}
+     * as a required field, stricter than the general release command path.
+     * Delegates to the same {@link ReleaseCommandFacade} after adapting the request.
+     *
+     * <p>Returns HTTP 202 with a {@code Location} header and an
+     * {@link AcceptedAcknowledgement} body on success.
+     * Returns HTTP 422 when the v2 route family or QUICK_DEPLOY operation is disabled.
+     * Returns HTTP 400 on validation failure.
+     */
+    @Operation(
+            summary = "Submit a v2 quick deploy command",
+            description = "Accepts a quick deploy submission with required deployRequestId, "
+                    + "customer context, tool context, and canonical task identifier. "
+                    + "Returns 202 Accepted with jobId and statusUrl.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "Quick deploy accepted for asynchronous execution",
+                    headers = @Header(name = "Location",
+                            description = "URL for polling the job status",
+                            schema = @Schema(type = "string")),
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = AcceptedAcknowledgement.class))),
+            @ApiResponse(responseCode = "400", description = "Validation failure — required fields missing or invalid",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "V2 routes or QUICK_DEPLOY operation disabled",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping(path = "/quick-deploy",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> submitQuickDeploy(
+            @Valid @RequestBody QuickDeploySubmissionRequest request) {
+        long startMs = System.currentTimeMillis();
+        String operationType = ReleaseCoexistenceTelemetry.resolveOperationType("QUICK_DEPLOY");
+        String correlationId = resolveCorrelationId();
+
+        if (!routesProperties.isEnabled()) {
+            return buildDisabledResponse(correlationId, operationType, startMs,
+                    ERROR_CODE_ROUTES_DISABLED,
+                    "V2 release routes are globally disabled by operator configuration.");
+        }
+
+        if (!routesProperties.isOperationEnabled("QUICK_DEPLOY")) {
+            return buildDisabledResponse(correlationId, operationType, startMs,
+                    ERROR_CODE_OPERATION_DISABLED,
+                    "Operation type 'QUICK_DEPLOY' is not enabled in the v2 release routes configuration.");
+        }
+
+        ReleaseCommandRequest cmd = quickDeployAdapter.toReleaseCommandRequest(request);
+        AcceptedAcknowledgement ack = facade.accept(cmd);
+        URI location = URI.create(ack.getStatusUrl());
+
+        safeLogger.logEvent(SafeLogEvent.builder()
+                .operation("v2-quick-deploy-submit")
                 .controller("ReleaseJobController")
                 .outcome(SafeLogEvent.Outcome.ACCEPTED)
                 .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)

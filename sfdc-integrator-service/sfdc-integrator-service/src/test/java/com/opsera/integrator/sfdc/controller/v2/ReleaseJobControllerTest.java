@@ -6,6 +6,7 @@ import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.exceptions.V2UnsupportedOperationException;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
+import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionAdapter;
 import com.opsera.integrator.sfdc.resources.v2.release.AcceptedAcknowledgement;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseLifecycleState;
@@ -67,6 +68,9 @@ class ReleaseJobControllerTest {
 
     @MockBean
     private ReleaseCoexistenceTelemetry telemetry;
+
+    @MockBean
+    private QuickDeploySubmissionAdapter quickDeployAdapter;
 
     @BeforeEach
     void setUp() {

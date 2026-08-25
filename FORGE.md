@@ -322,3 +322,10 @@
 - **Files:** 20 (+1310/-0)
 - **Duration:** 737ss
 - **Approach:** Implemented a scheduled timeout monitor (JobTimeoutMonitor) using Spring @Scheduled with fixed-delay to scan for stale active jobs and finalize them via JobLifecycleService.markTimedOut(). Added JobDiagnosticsService to build safe allow-listed summaries (no credentials/stack-traces) from job record and checkpoint data. Added JobTimeoutProperties @ConfigurationProperties with safe defaults (240 min stale threshold, 30 min accepted grace period). Wired via JobTimeoutConfig @EnableScheduling + @EnableConfigurationProperties. Terminal state protection is enforced by the existing LifecycleTransitionPolicy. Concurrent replica safety is handled through optimistic concurrency (LifecycleConcurrencyException treated as safe skip). Per-job errors are isolated so one malformed record cannot abort the scan. Metrics emitted via Micrometer Counter with bounded tags (no high-cardinality job/customer identifiers).
+
+## WO-146: User Story: WO-146 - Add Quick Deploy V2 Submission
+- **Status:** completed
+- **Commit:** `f8cb932`
+- **Files:** 11 (+705/-1)
+- **Duration:** 438ss
+- **Approach:** Added a dedicated POST /api/v2/sfdc/release-jobs/quick-deploy endpoint to the existing ReleaseJobController by adding a new @PostMapping('/quick-deploy') method. Created QuickDeploySubmissionRequest DTO with deployRequestId, customerId, sfdcToolId, taskId as required @NotBlank fields. Created QuickDeploySubmissionAdapter @Component that maps the DTO to the existing ReleaseCommandRequest (always setting operationType=QUICK_DEPLOY) with deterministic taskId precedence over gitTaskId fallback. The new endpoint reuses the existing ReleaseCommandFacade and V2ReleaseRoutesProperties gates, returning HTTP 202/422/400 consistently with the general release endpoint. Legacy POST /quickdeploy is untouched. Existing controller tests updated with @MockBean for QuickDeploySubmissionAdapter.

@@ -1,0 +1,6 @@
+{
+  "_comment": "Fixture: v2 quick deploy request missing required deployRequestId. Must return HTTP 400.",
+  "customerId": "customer-v2-fixture-001",
+  "sfdcToolId": "sfdc-tool-v2-fixture-001",
+  "taskId": "step-v2-qdeploy-fixture-001"
+}

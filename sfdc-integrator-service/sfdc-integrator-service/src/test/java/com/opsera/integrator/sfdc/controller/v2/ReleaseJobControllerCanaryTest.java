@@ -5,6 +5,7 @@ import com.opsera.integrator.sfdc.config.V2ReleaseRoutesProperties;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
+import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionAdapter;
 import com.opsera.integrator.sfdc.resources.v2.release.AcceptedAcknowledgement;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseLifecycleState;
@@ -62,6 +63,9 @@ class ReleaseJobControllerCanaryTest {
 
     @MockBean
     private ReleaseCoexistenceTelemetry telemetry;
+
+    @MockBean
+    private QuickDeploySubmissionAdapter quickDeployAdapter;
 
     @Test
     void submitReleaseCommand_enabledOperation_returns202() throws Exception {
