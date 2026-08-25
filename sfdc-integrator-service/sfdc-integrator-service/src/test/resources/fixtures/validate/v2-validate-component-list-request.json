@@ -1,0 +1,12 @@
+{
+  "_comment": "Component-list validation submission — validationMode COMPONENT_LIST, no packageId",
+  "customerId": "customer-fixture-001",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "taskId": "step-validate-fixture-002",
+  "targetOrgId": "org-fixture-001",
+  "repositoryId": "repo-fixture-001",
+  "branch": "feature/my-branch",
+  "validationMode": "COMPONENT_LIST",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-validate-fixture-002"
+}

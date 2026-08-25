@@ -10,6 +10,8 @@ import com.opsera.integrator.sfdc.resources.v2.deploy.DeploymentSubmissionAdapte
 import com.opsera.integrator.sfdc.resources.v2.deploy.DeploymentSubmissionRequest;
 import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionAdapter;
 import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionRequest;
+import com.opsera.integrator.sfdc.resources.v2.validate.ValidationSubmissionAdapter;
+import com.opsera.integrator.sfdc.resources.v2.validate.ValidationSubmissionRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.AcceptedAcknowledgement;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.services.v2.ReleaseCommandFacade;
@@ -69,19 +71,22 @@ public class ReleaseJobController {
     private final ReleaseCoexistenceTelemetry telemetry;
     private final QuickDeploySubmissionAdapter quickDeployAdapter;
     private final DeploymentSubmissionAdapter deploymentAdapter;
+    private final ValidationSubmissionAdapter validationAdapter;
 
     public ReleaseJobController(ReleaseCommandFacade facade,
             V2ReleaseRoutesProperties routesProperties,
             SafeStructuredLogger safeLogger,
             ReleaseCoexistenceTelemetry telemetry,
             QuickDeploySubmissionAdapter quickDeployAdapter,
-            DeploymentSubmissionAdapter deploymentAdapter) {
+            DeploymentSubmissionAdapter deploymentAdapter,
+            ValidationSubmissionAdapter validationAdapter) {
         this.facade = facade;
         this.routesProperties = routesProperties;
         this.safeLogger = safeLogger;
         this.telemetry = telemetry;
         this.quickDeployAdapter = quickDeployAdapter;
         this.deploymentAdapter = deploymentAdapter;
+        this.validationAdapter = validationAdapter;
     }
 
     /**
@@ -302,6 +307,88 @@ public class ReleaseJobController {
 
         safeLogger.logEvent(SafeLogEvent.builder()
                 .operation("v2-deploy-submit")
+                .controller("ReleaseJobController")
+                .outcome(SafeLogEvent.Outcome.ACCEPTED)
+                .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)
+                .safeField("operationType", operationType)
+                .safeField("outcome", ReleaseCoexistenceTelemetry.OUTCOME_ACCEPTED)
+                .safeField("prevalidationWarningCount", String.valueOf(warnings.size()))
+                .build());
+        telemetry.record(ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2, operationType,
+                ReleaseCoexistenceTelemetry.OUTCOME_ACCEPTED,
+                ReleaseCoexistenceTelemetry.ENDPOINT_SUBMISSION,
+                System.currentTimeMillis() - startMs);
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .location(location)
+                .body(ack);
+    }
+
+    /**
+     * Submits a validation command via the dedicated v2 validate path.
+     *
+     * <p>Performs prevalidation of source control and package context before lifecycle
+     * acceptance. Safe prevalidation warnings (no raw XML or credentials) are included in
+     * the response when context is missing but do not block acceptance.
+     *
+     * <p>Returns HTTP 202 with a {@code Location} header and an
+     * {@link AcceptedAcknowledgement} body on success.
+     * Returns HTTP 422 when the v2 route family or VALIDATE operation is disabled.
+     * Returns HTTP 400 on validation failure. The API thread does not wait for
+     * Salesforce validation completion.
+     */
+    @Operation(
+            summary = "Submit a v2 validation command",
+            description = "Accepts a validation submission with required customer context, tool context, "
+                    + "task identifier, and target org. Optional source control and package context "
+                    + "is used for prevalidation. Returns 202 Accepted with jobId and statusUrl.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "Validation accepted for asynchronous execution",
+                    headers = @Header(name = "Location",
+                            description = "URL for polling the job status",
+                            schema = @Schema(type = "string")),
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = AcceptedAcknowledgement.class))),
+            @ApiResponse(responseCode = "400", description = "Validation failure — required fields missing or invalid",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "V2 routes or VALIDATE operation disabled",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping(path = "/validate",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> submitValidation(
+            @Valid @RequestBody ValidationSubmissionRequest request) {
+        long startMs = System.currentTimeMillis();
+        String operationType = ReleaseCoexistenceTelemetry.resolveOperationType("VALIDATE");
+        String correlationId = resolveCorrelationId();
+
+        if (!routesProperties.isEnabled()) {
+            return buildDisabledResponse(correlationId, operationType, startMs,
+                    ERROR_CODE_ROUTES_DISABLED,
+                    "V2 release routes are globally disabled by operator configuration.");
+        }
+
+        if (!routesProperties.isOperationEnabled("VALIDATE")) {
+            return buildDisabledResponse(correlationId, operationType, startMs,
+                    ERROR_CODE_OPERATION_DISABLED,
+                    "Operation type 'VALIDATE' is not enabled in the v2 release routes configuration.");
+        }
+
+        List<String> warnings = validationAdapter.collectPrevalidationWarnings(request);
+
+        ReleaseCommandRequest cmd = validationAdapter.toReleaseCommandRequest(request);
+        AcceptedAcknowledgement ack = facade.accept(cmd);
+        if (!warnings.isEmpty()) {
+            ack.setSafeWarnings(warnings);
+        }
+        URI location = URI.create(ack.getStatusUrl());
+
+        safeLogger.logEvent(SafeLogEvent.builder()
+                .operation("v2-validate-submit")
                 .controller("ReleaseJobController")
                 .outcome(SafeLogEvent.Outcome.ACCEPTED)
                 .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)

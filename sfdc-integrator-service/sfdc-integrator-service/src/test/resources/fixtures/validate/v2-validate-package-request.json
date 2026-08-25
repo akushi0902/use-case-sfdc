@@ -1,0 +1,13 @@
+{
+  "_comment": "Valid package validation submission with full source control and package context",
+  "customerId": "customer-fixture-001",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "taskId": "step-validate-fixture-001",
+  "targetOrgId": "org-fixture-001",
+  "repositoryId": "repo-fixture-001",
+  "branch": "main",
+  "packageId": "package-fixture-001",
+  "validationMode": "PACKAGE",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-validate-fixture-001"
+}

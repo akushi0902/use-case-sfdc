@@ -7,6 +7,7 @@ import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
 import com.opsera.integrator.sfdc.resources.v2.deploy.DeploymentSubmissionAdapter;
 import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionAdapter;
+import com.opsera.integrator.sfdc.resources.v2.validate.ValidationSubmissionAdapter;
 import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.AcceptedAcknowledgement;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseLifecycleState;
@@ -83,6 +84,9 @@ class QuickDeployV2ControllerTest {
 
     @MockBean
     private DeploymentSubmissionAdapter deploymentAdapter;
+
+    @MockBean
+    private ValidationSubmissionAdapter validationAdapter;
 
     @BeforeEach
     void setUp() {
