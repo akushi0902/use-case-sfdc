@@ -1,0 +1,43 @@
+.claude/
+CLAUDE.md
+
+# Gradle
+.gradle/
+**/build/
+!src/**/build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+.gradletasknamecache
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+.settings/
+.project
+.classpath
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sensitive
+*.env
+.env
+local.properties
+secrets.properties

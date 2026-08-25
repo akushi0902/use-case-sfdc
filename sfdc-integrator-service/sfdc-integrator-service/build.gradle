@@ -1,0 +1,156 @@
+// ============================================================
+// Repository Policy:
+//   Supported repositories: mavenCentral, gradlePluginPortal,
+//   and the authenticated internal Opsera package manager.
+//   JCenter is deprecated, has weak provenance guarantees, and
+//   is NOT permitted. See README.md for hygiene checks.
+// ============================================================
+
+buildscript {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        // Internal Opsera package manager — required for Opsera build plugins.
+        // Set OPSERA_REPO_URL, OPSERA_REPO_USER, and OPSERA_REPO_TOKEN in your
+        // environment or CI secret store. Do NOT commit credentials.
+        if (System.getenv('OPSERA_REPO_URL')) {
+            maven {
+                url System.getenv('OPSERA_REPO_URL')
+                credentials {
+                    username = System.getenv('OPSERA_REPO_USER') ?: ''
+                    password = System.getenv('OPSERA_REPO_TOKEN') ?: ''
+                }
+            }
+        }
+    }
+    dependencies {
+        classpath 'org.springframework.boot:spring-boot-gradle-plugin:3.4.1'
+        classpath 'io.spring.gradle:dependency-management-plugin:1.1.7'
+    }
+}
+
+plugins {
+    id 'java'
+}
+
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+group = 'com.opsera.integrator'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+// ============================================================
+// Artifact Repositories
+// Supported: mavenCentral, gradlePluginPortal (plugins only),
+//            internal Opsera package manager (authenticated).
+// NOT permitted: jcenter, bintray, or any deprecated external
+//               repository. See README.md for hygiene checks.
+// ============================================================
+repositories {
+    mavenCentral()
+    // Internal Opsera package manager — required for Opsera libraries.
+    // Set OPSERA_REPO_URL, OPSERA_REPO_USER, and OPSERA_REPO_TOKEN in your
+    // environment or CI secret store. Do NOT commit credentials.
+    if (System.getenv('OPSERA_REPO_URL')) {
+        maven {
+            url System.getenv('OPSERA_REPO_URL')
+            credentials {
+                username = System.getenv('OPSERA_REPO_USER') ?: ''
+                password = System.getenv('OPSERA_REPO_TOKEN') ?: ''
+            }
+        }
+    }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:3.4.1'
+    }
+}
+
+dependencies {
+    // Spring Boot starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Spring Kafka
+    implementation 'org.springframework.kafka:spring-kafka'
+
+    // Hazelcast
+    implementation 'com.hazelcast:hazelcast-spring'
+
+    // Salesforce / Opsera internal libraries (resolved from internal package manager)
+    // These coordinates must be available in OPSERA_REPO_URL.
+    // If resolution fails, mirror the artifact to the internal repository or
+    // replace it with an approved alternative — do NOT restore JCenter.
+    // implementation 'com.opsera.salesforce:opsera-sf-library:<version>'
+
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// ============================================================
+// Repository Hygiene Verification
+//
+// Run this task to detect accidental JCenter reintroduction:
+//   ./gradlew checkNoJCenter
+//
+// This task fails the build if jcenter() or any JCenter URL
+// appears in buildscript or project repository declarations.
+// Add this to CI gating steps to prevent regression.
+// ============================================================
+tasks.register('checkNoJCenter') {
+    group = 'Verification'
+    description = 'Fails the build if JCenter is declared in any Gradle repository block. ' +
+            'Run: ./gradlew checkNoJCenter'
+
+    doLast {
+        def buildFiles = fileTree(rootDir) {
+            include '**/*.gradle', '**/*.gradle.kts'
+            exclude '**/build/**'
+        }
+
+        def jcenterPattern = ~/(?i)(jcenter\(\)|https?:\/\/jcenter\.bintray\.com)/
+        def violations = []
+
+        buildFiles.each { file ->
+            file.readLines().eachWithIndex { line, idx ->
+                // Skip comment lines and string literals in task/pattern definitions
+                def stripped = line.trim()
+                if (stripped.startsWith('//') || stripped.startsWith('*') || stripped.startsWith('/*')) {
+                    return
+                }
+                if (line =~ jcenterPattern) {
+                    violations << "${file.path}:${idx + 1}: ${line.trim()}"
+                }
+            }
+        }
+
+        if (violations) {
+            throw new GradleException(
+                "Repository hygiene violation: JCenter is declared in the following location(s).\n" +
+                "JCenter is deprecated with weak availability and provenance guarantees.\n" +
+                "Mirror or replace any missing artifact in an approved repository instead of\n" +
+                "restoring JCenter access.\n\nViolations:\n" +
+                violations.join('\n')
+            )
+        } else {
+            logger.lifecycle("checkNoJCenter PASSED — no JCenter declarations found.")
+        }
+    }
+}
+
+// Wire hygiene check into the standard check lifecycle
+check.dependsOn checkNoJCenter
