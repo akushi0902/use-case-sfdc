@@ -1,0 +1,7 @@
+{
+  "_comment": "Valid quick deploy start request. deploymentRequestId is required.",
+  "deploymentRequestId": "deploy-req-abc123",
+  "pipelineId": "pipeline-001",
+  "stepId": "step-qdeploy-01",
+  "fallbackTaskId": "task-fallback-xyz"
+}

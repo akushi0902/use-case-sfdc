@@ -1,0 +1,99 @@
+{
+  "inventory_version": "1.0",
+  "service": "sfdc-integrator-service",
+  "characterized_at": "2026-08-25",
+  "purpose": "Machine-readable inventory of characterized legacy release API contracts. Used as a baseline before v2 coexistence changes. Do not modify behavior without updating this document.",
+  "routes": [
+    {
+      "id": "LEGACY-001",
+      "method": "POST",
+      "path": "/quickdeploy",
+      "controller": "JobExecutionController",
+      "handler_method": "startQuickDeploy",
+      "request_dto": "QuickDeployRequest",
+      "required_fields": ["deploymentRequestId"],
+      "optional_fields": ["pipelineId", "stepId", "fallbackTaskId"],
+      "normalization": "fallbackTaskId is normalized to empty string when null",
+      "success_status": 200,
+      "success_body": "SUCCESS",
+      "success_content_type": "text/plain",
+      "error_status": 400,
+      "error_body": "deploymentRequestId is required",
+      "error_condition": "deploymentRequestId is null or blank — rejected BEFORE service delegation",
+      "delegated_service": "QuickDeployService.start(QuickDeployRequest)",
+      "delegation_mode": "async — controller acknowledges immediately, execution proceeds in background",
+      "fixture_valid": "quick-deploy-valid-request.json",
+      "fixture_no_fallback": "quick-deploy-valid-request-no-fallback.json",
+      "fixture_missing_id": "quick-deploy-missing-id.json",
+      "characterization_test": "JobExecutionControllerTest#startQuickDeploy_*"
+    },
+    {
+      "id": "LEGACY-002",
+      "method": "POST",
+      "path": "/quickdeploy/stop",
+      "controller": "JobExecutionController",
+      "handler_method": "stopQuickDeploy",
+      "request_dto": "QuickDeployStopRequest",
+      "required_fields": [],
+      "optional_fields": ["deploymentRequestId", "pipelineId"],
+      "success_status": 200,
+      "success_body": "SUCCESS",
+      "success_content_type": "text/plain",
+      "delegated_service": "QuickDeployService.stop(QuickDeployStopRequest)",
+      "delegation_mode": "sync acknowledgement — cancellation is forwarded to service",
+      "fixture_valid": "quick-deploy-stop-request.json",
+      "characterization_test": "JobExecutionControllerTest#stopQuickDeploy_*"
+    },
+    {
+      "id": "LEGACY-003",
+      "method": "POST",
+      "path": "/deploy",
+      "controller": "SfdcIntegratorController",
+      "handler_method": "deploy",
+      "request_dto": "DeployRequest",
+      "required_fields": [],
+      "optional_fields": ["pipelineId", "stepId", "orgUrl"],
+      "success_status": 200,
+      "success_body": "SUCCESS",
+      "success_content_type": "text/plain",
+      "delegated_service": "SfdcIntegratorService.deploy(DeployRequest)",
+      "fixture_valid": "deploy-valid-request.json",
+      "characterization_test": "SfdcIntegratorControllerTest#deploy_*"
+    },
+    {
+      "id": "LEGACY-004",
+      "method": "POST",
+      "path": "/validate",
+      "controller": "SfdcIntegratorController",
+      "handler_method": "validate",
+      "request_dto": "DeployRequest",
+      "required_fields": [],
+      "optional_fields": ["pipelineId", "stepId", "orgUrl"],
+      "success_status": 200,
+      "success_body": "SUCCESS",
+      "success_content_type": "text/plain",
+      "delegated_service": "SfdcIntegratorService.validate(DeployRequest)",
+      "fixture_valid": "deploy-valid-request.json",
+      "characterization_test": "SfdcIntegratorControllerTest#validate_*"
+    }
+  ],
+  "exception_handler": {
+    "class": "SfdcExceptionHandler",
+    "malformed_json": {
+      "trigger": "HttpMessageNotReadableException",
+      "status": 400,
+      "body": "Malformed request body"
+    },
+    "unhandled_exception": {
+      "trigger": "Exception",
+      "status": 500,
+      "body": "Internal service error",
+      "risk_note": "Catch-all may obscure root causes; safe error modernization tracked for a later story"
+    }
+  },
+  "correlation_boundary": {
+    "filter": "CorrelationIdFilter",
+    "header": "X-Correlation-Id",
+    "note": "All responses include X-Correlation-Id per WO-105 correlation boundary"
+  }
+}

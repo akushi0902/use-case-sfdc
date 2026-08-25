@@ -1,0 +1,5 @@
+{
+  "_comment": "Malformed quick deploy request: deploymentRequestId is absent. Controller must reject this with HTTP 400 before calling QuickDeployService.",
+  "pipelineId": "pipeline-004",
+  "stepId": "step-qdeploy-03"
+}

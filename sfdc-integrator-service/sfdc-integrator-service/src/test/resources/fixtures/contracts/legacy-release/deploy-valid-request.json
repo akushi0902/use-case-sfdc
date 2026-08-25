@@ -1,0 +1,6 @@
+{
+  "_comment": "Valid deployment/validation request for SfdcIntegratorController.",
+  "pipelineId": "pipeline-003",
+  "stepId": "step-deploy-01",
+  "orgUrl": "https://test.salesforce.example.internal"
+}
