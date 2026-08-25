@@ -84,3 +84,10 @@
 - **Files:** 7 (+325/-2)
 - **Duration:** 331ss
 - **Approach:** Created a new JobExecutionControllerCompatibilityTest class as a @WebMvcTest slice that loads fixture files from fixtures/quickdeploy/ and uses ArgumentCaptor to verify exact fallback normalization behavior (null → empty string) and delegation field values. The test class is distinct from the existing JobExecutionControllerTest and explicitly annotated as a characterization suite with a review gate comment. A companion compat-note document captures the preserved behaviors, review gate process, and links to the SLO guardrails and contract inventory. No production code was changed.
+
+## WO-113: User Story: WO-113 - Map Legacy Integrator Controller Contracts
+- **Status:** completed
+- **Commit:** `945adc6`
+- **Files:** 5 (+285/-2)
+- **Duration:** 201ss
+- **Approach:** Inventoried SfdcIntegratorController (2 routes: POST /deploy, POST /validate) from source annotations, then created a new SfdcIntegratorControllerCompatibilityTest with 8 @WebMvcTest tests. Each route has: success-body test loading a fixture file, ArgumentCaptor-based delegation test verifying exact field values, service-exception-to-500 test verifying SfdcExceptionHandler catch-all returns 'Internal service error', and malformed-JSON-to-400 test. A contract map JSON at src/test/resources/contracts/ documents both routes with all contract details. Fixtures use synthetic identifiers and example.internal URLs only. legacy-contract-inventory.json updated to cross-reference the new test class and contract map.

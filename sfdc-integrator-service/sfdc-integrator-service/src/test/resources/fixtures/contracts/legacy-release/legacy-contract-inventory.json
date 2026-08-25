@@ -60,7 +60,9 @@
       "success_content_type": "text/plain",
       "delegated_service": "SfdcIntegratorService.deploy(DeployRequest)",
       "fixture_valid": "deploy-valid-request.json",
-      "characterization_test": "SfdcIntegratorControllerTest#deploy_*"
+      "fixture_compat": "fixtures/sfdc-integrator/sfdc-integrator-deploy-request.json",
+      "characterization_test": "SfdcIntegratorControllerTest#deploy_*, SfdcIntegratorControllerCompatibilityTest#deploy_*",
+      "contract_map": "contracts/legacy-sfdc-integrator-controller.json (SFDC-001)"
     },
     {
       "id": "LEGACY-004",
@@ -76,7 +78,9 @@
       "success_content_type": "text/plain",
       "delegated_service": "SfdcIntegratorService.validate(DeployRequest)",
       "fixture_valid": "deploy-valid-request.json",
-      "characterization_test": "SfdcIntegratorControllerTest#validate_*"
+      "fixture_compat": "fixtures/sfdc-integrator/sfdc-integrator-validate-request.json",
+      "characterization_test": "SfdcIntegratorControllerTest#validate_*, SfdcIntegratorControllerCompatibilityTest#validate_*",
+      "contract_map": "contracts/legacy-sfdc-integrator-controller.json (SFDC-002)"
     }
   ],
   "exception_handler": {
