@@ -1,0 +1,7 @@
+{
+  "_comment": "Sanitized fixture representing users without MFA for security compliance testing. Usernames use fixture.example.internal domain — no real user data.",
+  "users": [
+    {"username": "user-fixture-001@fixture.example.internal", "mfaEnabled": false},
+    {"username": "user-fixture-002@fixture.example.internal", "mfaEnabled": false}
+  ]
+}

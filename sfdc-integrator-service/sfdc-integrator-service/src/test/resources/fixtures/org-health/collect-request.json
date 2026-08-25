@@ -1,0 +1,7 @@
+{
+  "_comment": "Sanitized fixture for org health collection request compatibility test. Uses fixture.example.internal placeholders only.",
+  "customerId": "cust-fixture-oh-compat-001",
+  "toolId": "tool-fixture-oh-compat-001",
+  "orgUrl": "https://org.fixture.example.internal",
+  "apiVersion": "58.0"
+}

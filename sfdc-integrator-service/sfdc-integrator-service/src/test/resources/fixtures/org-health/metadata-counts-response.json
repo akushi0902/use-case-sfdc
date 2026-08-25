@@ -1,0 +1,11 @@
+{
+  "_comment": "Sanitized fixture for org metadata type counts. Uses synthetic customer and tool identifiers — no real org data.",
+  "customerId": "cust-fixture-oh-compat-001",
+  "toolId": "tool-fixture-oh-compat-001",
+  "counts": {
+    "ApexClass": 42,
+    "ApexTrigger": 10,
+    "CustomObject": 25,
+    "Flow": 8
+  }
+}

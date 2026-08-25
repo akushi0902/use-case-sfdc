@@ -217,3 +217,10 @@
 - **Files:** 14 (+766/-5)
 - **Duration:** 631ss
 - **Approach:** Inventoried DataMigrationController (had only POST /datamigration after prior modernization WOs). Added 10 legacy stub routes and DataDictionaryService interface as minimal seams required for characterization coverage. DataMigrationService extended with 10 new methods. All new routes delegate directly to service with no additional governance overhead (legacy stubs). /validate/migration-entities and /generate/data-dictionary return ACCEPTED as checkpoint-style acknowledgements; all other routes return SUCCESS. Created DataMigrationControllerCompatibilityTest with 12 @Nested subclasses (one per route) using @WebMvcTest + mocked services, fixture-based inputs, and ArgumentCaptor delegation assertions. Exception path tests verify HTTP 500 + INTERNAL_ERROR errorCode without exposing service detail. Added @MockBean DataDictionaryService to DataMigrationControllerTest and MaskedFixtureControllerTest to prevent injection failures.
+
+## WO-127: User Story: WO-127 - Preserve Org Health Compatibility Contracts
+- **Status:** completed
+- **Commit:** `318d95f`
+- **Files:** 13 (+822/-0)
+- **Duration:** 372ss
+- **Approach:** Inventoried OrgHealthController — did not exist; created from scratch as a compatibility preservation seam. Created four routes under /org-health: POST /collect (delegation to OrgHealthCollectorService, plain SUCCESS), GET /info (OrgHealthResponse typed response, 404 on cache miss), GET /users-without-mfa (List<MfaUserInfo>, 200 with empty list when none), GET /metadata-counts (MetadataCounts typed response, 404 on cache miss). Created model DTOs under model/orghealth/ and service interfaces under services/orghealth/. OrgHealthControllerCompatibilityTest uses @WebMvcTest + @MockBean with four @Nested subclasses (OH-001 through OH-004) covering: collection success + delegation + logging safety assertion, cached report found/not-found, empty MFA user list, metadata counts found/not-found/empty, and exception propagation for each route. Fixture files use cust-fixture-*/tool-fixture-* synthetic identifiers and @fixture.example.internal email domains.
