@@ -42,3 +42,10 @@
 - **Files:** 16 (+731/-0)
 - **Duration:** 327ss
 - **Approach:** Created the legacy controller layer from scratch (scaffolded repo): JobExecutionController at POST /quickdeploy and POST /quickdeploy/stop, SfdcIntegratorController at POST /deploy and POST /validate. All endpoints return plain 'SUCCESS' string on HTTP 200 after delegating to service interfaces (QuickDeployService, SfdcIntegratorService). JobExecutionController validates deploymentRequestId manually (no @Valid) and normalizes null fallbackTaskId to empty string, matching the architecture description of legacy behavior. SfdcExceptionHandler (@ControllerAdvice) handles HttpMessageNotReadableException (400) and unhandled exceptions (500). Characterization tests use @WebMvcTest with @MockBean service collaborators and verify HTTP method, path, status codes, response bodies, and service delegation. Six JSON fixtures are committed under test/resources/fixtures/contracts/legacy-release/. The legacy-contract-inventory.json maps all four routes to their DTOs, required fields, response shapes, and service delegation targets (AC-6).
+
+## WO-107: User Story: WO-107 - Define Canonical V2 Release DTOs
+- **Status:** completed
+- **Commit:** `6e9c1da`
+- **Files:** 15 (+792/-0)
+- **Duration:** 536ss
+- **Approach:** Created a self-contained v2 release transport model in resources/v2/release with Jakarta Bean Validation (no Spring context required to instantiate or validate). Enums cover operation types and lifecycle states. ReleaseCommandMapper in services/v2 converts legacy DTOs to v2 commands using canonical task ID selection (stepId preferred, fallbackTaskId as fallback). All toString() methods exclude sensitive fields (requestedBy, clientCorrelationId, rejectedValue). No new HTTP endpoints introduced; legacy controllers unchanged.

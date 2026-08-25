@@ -1,0 +1,13 @@
+{
+  "_comment": "Sanitized fixture for a v2 QUICK_DEPLOY release command. deployRequestId is required for this operation type.",
+  "operationType": "QUICK_DEPLOY",
+  "customerId": "customer-example-001",
+  "sfdcToolId": "sfdc-tool-example-001",
+  "taskId": "step-qd-001",
+  "gitTaskId": "fallback-task-001",
+  "pipelineId": "pipeline-example-001",
+  "stepId": "step-qd-001",
+  "deployRequestId": "deploy-req-example-001",
+  "requestedBy": "<omitted-in-fixture>",
+  "clientCorrelationId": "client-cid-qd-001"
+}
