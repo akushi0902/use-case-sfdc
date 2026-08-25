@@ -1,0 +1,14 @@
+{
+  "_comment": "Representative quick deploy dispatch request fixture. All identifiers are placeholders — no real credentials, org URLs, or customer data.",
+  "commandType": "QUICK_DEPLOY",
+  "correlationId": "corr-fixture-qdeploy-001",
+  "idempotencyKey": "idempotency-qdeploy-fixture-001",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-qdeploy-fixture-001",
+  "customerId": "customer-fixture-001",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "deploymentRequestId": "deploy-req-fixture-001",
+  "fallbackTaskId": "fallback-task-fixture-001",
+  "timeoutSeconds": 1800,
+  "safeMetadata": "{\"commandType\":\"QUICK_DEPLOY\",\"pipelineId\":\"pipeline-fixture-001\"}"
+}

@@ -71,6 +71,23 @@ sfdc:
         # Set to false for canary rollback without affecting legacy routes.
         enabled: true
 
+  worker-dispatch:
+    # Master kill switch for Kubernetes worker dispatch.
+    # Must be false in production until worker scheduling platform is certified.
+    # Rollback: set enabled=false to revert all traffic to legacy execution paths.
+    enabled: false
+    # Per-command-type worker dispatch flags. Only evaluated when enabled=true.
+    # Set a command type to true to route that operation type to worker pods.
+    # Supported values: QUICK_DEPLOY, DEPLOY, VALIDATE, CANCEL
+    command-types:
+      QUICK_DEPLOY: false
+      DEPLOY: false
+      VALIDATE: false
+      CANCEL: false
+    # Timeout for worker-dispatched jobs, in seconds.
+    # Worker pods are terminated if the job does not complete within this window.
+    timeout-seconds: 1800
+
   governance:
     classification:
       # Maps each GovernanceDataCategory to a DataClassification tier.

@@ -4,6 +4,7 @@ import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
  * <p>Only safe, operational fields (pipelineId, stepId) are logged. Raw credentials, Org URLs,
  * and deployment request payloads are not logged.
  */
+@Primary
 @Component
 public class QuickDeployCommandAdapter implements ReleaseCommandAdapter {
 

@@ -1,5 +1,9 @@
 package com.opsera.integrator.sfdc.services.v2;
 
+import com.opsera.integrator.sfdc.command.ReleaseCommandDispatcher;
+import com.opsera.integrator.sfdc.command.ReleaseDispatchRequest;
+import com.opsera.integrator.sfdc.command.ReleaseDispatchResult;
+import com.opsera.integrator.sfdc.command.WorkerDispatchProperties;
 import com.opsera.integrator.sfdc.correlation.CorrelationIdConstants;
 import com.opsera.integrator.sfdc.exceptions.V2UnsupportedOperationException;
 import com.opsera.integrator.sfdc.model.DeployRequest;
@@ -18,9 +22,10 @@ import java.util.UUID;
 /**
  * Facade service for v2 release command submission.
  *
- * <p>Validates the canonical command, resolves a correlation identifier, delegates
- * to the appropriate existing execution service, and returns a typed
- * {@link AcceptedAcknowledgement} without blocking on Salesforce CLI execution.
+ * <p>Validates the canonical command, resolves a correlation identifier, and routes
+ * execution to either the {@link ReleaseCommandDispatcher} (worker path when enabled) or the
+ * existing legacy service calls (fallback). Returns a typed {@link AcceptedAcknowledgement}
+ * without blocking on Salesforce CLI execution.
  *
  * <p>Correlation resolution priority:
  * <ol>
@@ -29,9 +34,12 @@ import java.util.UUID;
  *   <li>Freshly generated UUID</li>
  * </ol>
  *
- * <p>CANCEL is not yet delegated to a legacy path; it throws
- * {@link V2UnsupportedOperationException} so the shared exception handler returns
- * a structured 422 response.
+ * <p>Worker dispatch is enabled on a per-command-type basis via {@link WorkerDispatchProperties}.
+ * When worker dispatch is disabled for a command type, the legacy execution path is used and
+ * the returned {@link AcceptedAcknowledgement} is identical to the pre-dispatcher behavior.
+ *
+ * <p>CANCEL is routed through the dispatcher cancel path when worker dispatch is enabled,
+ * or throws {@link V2UnsupportedOperationException} when legacy cancel is not configured.
  */
 @Service
 public class ReleaseCommandFacade {
@@ -40,23 +48,69 @@ public class ReleaseCommandFacade {
 
     private final QuickDeployService quickDeployService;
     private final SfdcIntegratorService sfdcIntegratorService;
+    private final ReleaseCommandDispatcher releaseCommandDispatcher;
+    private final WorkerDispatchProperties workerDispatchProperties;
 
     public ReleaseCommandFacade(QuickDeployService quickDeployService,
-                                 SfdcIntegratorService sfdcIntegratorService) {
+                                 SfdcIntegratorService sfdcIntegratorService,
+                                 ReleaseCommandDispatcher releaseCommandDispatcher,
+                                 WorkerDispatchProperties workerDispatchProperties) {
         this.quickDeployService = quickDeployService;
         this.sfdcIntegratorService = sfdcIntegratorService;
+        this.releaseCommandDispatcher = releaseCommandDispatcher;
+        this.workerDispatchProperties = workerDispatchProperties;
     }
 
     /**
-     * Accepts a validated v2 release command, delegates to the appropriate legacy
-     * execution service, and returns an {@link AcceptedAcknowledgement}.
+     * Accepts a validated v2 release command, routes to worker or legacy execution, and returns
+     * an {@link AcceptedAcknowledgement}.
      *
      * @param command a validated {@link ReleaseCommandRequest}
      * @return accepted acknowledgement with job identity and status URL
-     * @throws V2UnsupportedOperationException if the operation type has no delegated implementation
+     * @throws V2UnsupportedOperationException if CANCEL is received without worker dispatch enabled
      */
     public AcceptedAcknowledgement accept(ReleaseCommandRequest command) {
         String correlationId = resolveCorrelationId(command);
+        String operationTypeName = command.getOperationType().name();
+
+        if (workerDispatchProperties.isWorkerDispatchEnabled(operationTypeName)) {
+            return acceptViaDispatcher(command, correlationId, operationTypeName);
+        }
+        return acceptViaLegacy(command, correlationId);
+    }
+
+    private AcceptedAcknowledgement acceptViaDispatcher(ReleaseCommandRequest command,
+                                                        String correlationId,
+                                                        String operationTypeName) {
+        ReleaseDispatchRequest dispatchRequest = ReleaseDispatchRequest.builder()
+                .commandType(operationTypeName)
+                .correlationId(correlationId)
+                .idempotencyKey(command.getClientCorrelationId())
+                .pipelineId(command.getPipelineId())
+                .stepId(command.getStepId())
+                .customerId(command.getCustomerId())
+                .sfdcToolId(command.getSfdcToolId())
+                .deploymentRequestId(command.getDeployRequestId())
+                .fallbackTaskId(command.getGitTaskId() != null ? command.getGitTaskId() : "")
+                .timeoutSeconds(workerDispatchProperties.getTimeoutSeconds())
+                .build();
+
+        ReleaseDispatchResult result = releaseCommandDispatcher.dispatch(dispatchRequest);
+
+        AcceptedAcknowledgement ack = new AcceptedAcknowledgement();
+        ack.setJobId(result.getJobId());
+        ack.setCorrelationId(result.getCorrelationId());
+        ack.setStatusUrl(result.getStatusPath() != null
+                ? result.getStatusPath()
+                : String.format(STATUS_URL_TEMPLATE, result.getJobId()));
+        ack.setState(ReleaseLifecycleState.ACCEPTED);
+        ack.setAcceptedAt(result.getAcceptedAt() != null ? result.getAcceptedAt() : Instant.now());
+        ack.setOperationType(command.getOperationType());
+        return ack;
+    }
+
+    private AcceptedAcknowledgement acceptViaLegacy(ReleaseCommandRequest command,
+                                                    String correlationId) {
         String jobId = UUID.randomUUID().toString();
 
         switch (command.getOperationType()) {

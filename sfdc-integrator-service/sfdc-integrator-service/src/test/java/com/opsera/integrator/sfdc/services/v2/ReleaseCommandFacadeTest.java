@@ -1,5 +1,7 @@
 package com.opsera.integrator.sfdc.services.v2;
 
+import com.opsera.integrator.sfdc.command.ReleaseCommandDispatcher;
+import com.opsera.integrator.sfdc.command.WorkerDispatchProperties;
 import com.opsera.integrator.sfdc.correlation.CorrelationIdConstants;
 import com.opsera.integrator.sfdc.exceptions.V2UnsupportedOperationException;
 import com.opsera.integrator.sfdc.model.DeployRequest;
@@ -42,11 +44,17 @@ class ReleaseCommandFacadeTest {
     @Mock
     private SfdcIntegratorService sfdcIntegratorService;
 
+    @Mock
+    private ReleaseCommandDispatcher releaseCommandDispatcher;
+
     private ReleaseCommandFacade facade;
 
     @BeforeEach
     void setUp() {
-        facade = new ReleaseCommandFacade(quickDeployService, sfdcIntegratorService);
+        // WorkerDispatchProperties defaults to enabled=false so all tests here exercise the legacy path
+        WorkerDispatchProperties disabledProps = new WorkerDispatchProperties();
+        facade = new ReleaseCommandFacade(quickDeployService, sfdcIntegratorService,
+                releaseCommandDispatcher, disabledProps);
         MDC.remove(CorrelationIdConstants.MDC_KEY);
     }
 

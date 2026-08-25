@@ -1,0 +1,14 @@
+{
+  "_comment": "Representative validation dispatch request fixture. All identifiers are placeholders — no real credentials, org URLs, or customer data.",
+  "commandType": "VALIDATE",
+  "correlationId": "corr-fixture-validate-001",
+  "idempotencyKey": "idempotency-validate-fixture-001",
+  "pipelineId": "pipeline-fixture-003",
+  "stepId": "step-validate-fixture-001",
+  "customerId": "customer-fixture-003",
+  "sfdcToolId": "sfdc-tool-fixture-003",
+  "deploymentRequestId": "",
+  "fallbackTaskId": "",
+  "timeoutSeconds": 900,
+  "safeMetadata": "{\"commandType\":\"VALIDATE\",\"pipelineId\":\"pipeline-fixture-003\"}"
+}
