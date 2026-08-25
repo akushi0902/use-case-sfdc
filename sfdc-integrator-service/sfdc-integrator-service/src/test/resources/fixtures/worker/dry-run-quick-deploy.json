@@ -1,0 +1,22 @@
+{
+  "_comment": "Synthetic fixture: quick-deploy dry-run command payload — placeholder identifiers, no secrets.",
+  "commandMode": "dry-run",
+  "commandType": "QUICK_DEPLOY",
+  "correlationId": "corr-worker-fixture-drydeploy-001",
+  "jobId": "job-worker-fixture-drydeploy-001",
+  "pipelineId": "pipeline-fixture-002",
+  "stepId": "step-fixture-002",
+  "deploymentRequestId": "deployment-request-fixture-001",
+  "environment": {
+    "COMMAND_TYPE": "QUICK_DEPLOY",
+    "CORRELATION_ID": "corr-worker-fixture-drydeploy-001",
+    "JOB_ID": "job-worker-fixture-drydeploy-001",
+    "DEPLOYMENT_REQUEST_ID": "deployment-request-fixture-001"
+  },
+  "_secrets_comment": "SFDC_INSTANCE_URL, SFDC_CLIENT_ID, SFDC_CLIENT_SECRET, SFDC_USERNAME are mounted at runtime — never in fixture files.",
+  "expectedExitCode": 0,
+  "expectedOutputContains": [
+    "mode=dry-run",
+    "commandType=QUICK_DEPLOY"
+  ]
+}

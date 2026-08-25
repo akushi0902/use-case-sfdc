@@ -674,3 +674,51 @@ tasks.register('validateProvenance') {
         logger.lifecycle("validateProvenance PASSED — provenance file is present with all required fields.")
     }
 }
+
+// ============================================================
+// Worker Image Definition Validation (WO-134)
+//
+// Validates the dedicated worker container image definition:
+// Dockerfile.worker, scripts/worker/entrypoint.sh, and all
+// embedded Salesforce release scripts under
+// src/main/resources/scripts/.
+//
+// Does NOT require a running Docker daemon — validates file
+// presence and bash syntax only. CI-safe.
+//
+// Run:  ./gradlew validateWorkerImage
+//
+// To build and run the full self-test (requires Docker):
+//   docker build -f Dockerfile.worker -t sfdc-worker:dev .
+//   docker run --rm sfdc-worker:dev self-test
+// ============================================================
+tasks.register('validateWorkerImage') {
+    group = 'Verification'
+    description = 'Validates the worker image definition: Dockerfile.worker, entrypoint.sh, ' +
+            'and all release scripts are present and syntactically valid. CI-safe (no Docker required). ' +
+            'Run: ./gradlew validateWorkerImage'
+
+    doLast {
+        def validationScript = new File(projectDir, 'scripts/worker/validate-worker-image.sh')
+        if (!validationScript.exists()) {
+            throw new GradleException(
+                "validateWorkerImage: validation script not found at ${validationScript.path}.\n" +
+                "Ensure scripts/worker/validate-worker-image.sh is committed."
+            )
+        }
+        def result = exec {
+            commandLine 'bash', validationScript.absolutePath
+            workingDir projectDir
+            ignoreExitValue = true
+        }
+        if (result.exitValue != 0) {
+            throw new GradleException(
+                "validateWorkerImage FAILED — worker image definition is invalid.\n" +
+                "Run ./gradlew validateWorkerImage for detailed check output."
+            )
+        }
+        logger.lifecycle("validateWorkerImage PASSED — Dockerfile.worker, entrypoint, and all release scripts are valid.")
+    }
+}
+
+check.dependsOn validateWorkerImage

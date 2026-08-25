@@ -1,0 +1,10 @@
+{
+  "_comment": "Synthetic fixture: unsupported command mode — entrypoint must exit non-zero with a safe error message.",
+  "commandMode": "invalid-mode",
+  "correlationId": "corr-worker-fixture-badmode-001",
+  "jobId": "job-worker-fixture-badmode-001",
+  "expectedExitCode": 1,
+  "expectedOutputContains": [
+    "unsupported-mode"
+  ]
+}

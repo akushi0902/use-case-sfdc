@@ -987,3 +987,78 @@ The `DefaultCommandDispatcher` is a separate Spring `@Service` — the legacy
 `JobExecutionController` continues to call `QuickDeployService.start()` directly and is
 unaffected. Modernized callers or new routes may use the dispatcher to receive a full
 `AcceptedCommandOutcome` with job tracking. Both paths coexist without interference.
+
+---
+
+## Worker Image (WO-134)
+
+The `sfdc-integrator-worker` container is a **dedicated release-execution runtime** separate from the API pods. It packages the Salesforce CLI, Git, Java 21 JRE, and embedded release scripts. API pods remain lightweight and unprivileged; workers carry the heavy CLI toolchain.
+
+### Image Definition
+
+| Asset | Path |
+|---|---|
+| Container definition | `Dockerfile.worker` |
+| Entrypoint script | `scripts/worker/entrypoint.sh` |
+| Release scripts | `src/main/resources/scripts/*.sh` |
+| Self-test fixtures | `src/test/resources/fixtures/worker/` |
+| Image validation | `scripts/worker/validate-worker-image.sh` |
+
+### Command Modes
+
+| Mode | Usage | External calls |
+|---|---|---|
+| `self-test` | `entrypoint.sh self-test` | None — verifies tool versions and script paths only |
+| `dry-run` | `COMMAND_TYPE=QUICK_DEPLOY entrypoint.sh dry-run` | None — validates env config and prints execution plan |
+| `execute <TYPE>` | `COMMAND_TYPE=QUICK_DEPLOY entrypoint.sh execute QUICK_DEPLOY` | Calls Salesforce CLI — requires all secrets to be mounted |
+
+Supported command types for `execute`: `QUICK_DEPLOY`, `DEPLOY`, `VALIDATE`, `ROLLBACK`, `PACKAGE`, `DIAGNOSTIC`.
+
+### Required Runtime Environment Variables
+
+All sensitive values must be **mounted as Kubernetes Secret references** at execution time. They must never be baked into the image.
+
+| Variable | Classification | Purpose |
+|---|---|---|
+| `SFDC_INSTANCE_URL` | RESTRICTED | Salesforce org instance URL |
+| `SFDC_CLIENT_ID` | RESTRICTED | Connected App client ID |
+| `SFDC_CLIENT_SECRET` | RESTRICTED | Connected App client secret |
+| `SFDC_USERNAME` | CONFIDENTIAL | Salesforce username |
+| `CORRELATION_ID` | NON_SECRET | Tracing correlation ID from the API request |
+| `COMMAND_TYPE` | NON_SECRET | Release command type (QUICK_DEPLOY, DEPLOY, etc.) |
+| `JOB_ID` | NON_SECRET | Durable job identifier from the lifecycle service |
+| `DEPLOYMENT_REQUEST_ID` | NON_SECRET | Salesforce deployment request ID (quick-deploy and rollback only) |
+
+### Build and Smoke-Test
+
+```bash
+# CI-safe validation (no Docker required)
+./gradlew validateWorkerImage
+
+# Build the image
+docker build -f Dockerfile.worker -t sfdc-worker:dev .
+
+# Run self-test (exits 0, no external calls)
+docker run --rm sfdc-worker:dev self-test
+
+# Run dry-run for QUICK_DEPLOY
+docker run --rm -e COMMAND_TYPE=QUICK_DEPLOY sfdc-worker:dev dry-run
+```
+
+### Security Invariants
+
+- Worker container runs as `sfdc-worker` (uid 1001) — never root.
+- No credentials are baked into the image — all injected at runtime via mounted references.
+- Self-test and dry-run modes make no network calls to Salesforce or Kubernetes.
+- Entrypoint never prints variable values — only variable names in diagnostic output.
+- All log output is prefixed with `[sfdc-worker] correlationId=... jobId=...` for traceability.
+
+### Troubleshooting
+
+| Symptom | Likely cause | Resolution |
+|---|---|---|
+| `missing-required-secret: 'SFDC_CLIENT_SECRET'` | Secret not mounted | Mount the Kubernetes Secret as env var before executing |
+| `missing-script: '/opt/sfdc-worker/scripts/quick-deploy.sh'` | Image not built with scripts | Rebuild image from `Dockerfile.worker` with full build context |
+| `unsupported-mode: 'foo'` | Wrong command argument | Use `self-test`, `dry-run`, or `execute <TYPE>` |
+| `unsupported-command-type: 'FOO'` | Unknown command type | Check supported types: QUICK_DEPLOY, DEPLOY, VALIDATE, ROLLBACK, PACKAGE, DIAGNOSTIC |
+| Self-test fails with `sf-cli-not-responding` | Node.js or SF CLI install failed | Rebuild image; check base image Node version compatibility |
