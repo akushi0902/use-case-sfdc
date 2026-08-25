@@ -141,3 +141,26 @@ logging:
   level:
     root: INFO
     com.opsera.integrator.sfdc: DEBUG
+
+  kafka:
+    # Kafka bootstrap servers for checkpoint consumers.
+    # Set KAFKA_BOOTSTRAP_SERVERS in production (e.g. kafka-broker-1:9092,kafka-broker-2:9092).
+    # No default — checkpoint listener will not start without this value when enabled.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:}
+    consumer:
+      # Disable auto-commit — checkpoints are committed after successful durable persistence.
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+sfdc:
+  checkpoint:
+    kafka:
+      # Set to true to enable the KafkaCheckpointListener.
+      # Disabled by default so existing deployments are unaffected until ready to enable.
+      enabled: ${SFDC_CHECKPOINT_KAFKA_ENABLED:false}
+      # Topic emitting job checkpoint progress events.
+      topic: ${SFDC_CHECKPOINT_TOPIC:sfdc-job-checkpoints}
+      # Consumer group for checkpoint persistence.
+      consumer-group: ${SFDC_CHECKPOINT_CONSUMER_GROUP:sfdc-checkpoint-persistence}

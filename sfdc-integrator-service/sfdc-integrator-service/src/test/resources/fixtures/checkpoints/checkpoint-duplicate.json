@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic fixture: duplicate delivery of an already-persisted running checkpoint — same jobId, sequenceNumber, and checkpointCode as checkpoint-running.json",
+  "jobId": "job-checkpoint-fixture-001",
+  "correlationId": "corr-checkpoint-fixture-001",
+  "checkpointCode": "WORKER_STARTED",
+  "statusCategory": "RUNNING",
+  "sequenceNumber": 1,
+  "eventTimestamp": "2024-01-01T10:00:00.000Z",
+  "safeMessage": "Worker pod accepted job and started execution",
+  "messageId": "msg-checkpoint-fixture-running-001",
+  "safeReasonCode": null
+}

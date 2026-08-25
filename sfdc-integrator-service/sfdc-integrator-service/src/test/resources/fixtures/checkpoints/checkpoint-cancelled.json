@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic fixture: checkpoint event indicating job was cancelled before completion",
+  "jobId": "job-checkpoint-fixture-003",
+  "correlationId": "corr-checkpoint-fixture-003",
+  "checkpointCode": "JOB_CANCELLED",
+  "statusCategory": "CANCELLED",
+  "sequenceNumber": 2,
+  "eventTimestamp": "2024-01-01T12:00:00.000Z",
+  "safeMessage": "Job cancelled by operator request",
+  "messageId": "msg-checkpoint-fixture-cancelled-001",
+  "safeReasonCode": "OPERATOR_CANCELLED"
+}
