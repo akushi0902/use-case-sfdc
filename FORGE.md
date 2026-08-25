@@ -224,3 +224,10 @@
 - **Files:** 13 (+822/-0)
 - **Duration:** 372ss
 - **Approach:** Inventoried OrgHealthController — did not exist; created from scratch as a compatibility preservation seam. Created four routes under /org-health: POST /collect (delegation to OrgHealthCollectorService, plain SUCCESS), GET /info (OrgHealthResponse typed response, 404 on cache miss), GET /users-without-mfa (List<MfaUserInfo>, 200 with empty list when none), GET /metadata-counts (MetadataCounts typed response, 404 on cache miss). Created model DTOs under model/orghealth/ and service interfaces under services/orghealth/. OrgHealthControllerCompatibilityTest uses @WebMvcTest + @MockBean with four @Nested subclasses (OH-001 through OH-004) covering: collection success + delegation + logging safety assertion, cached report found/not-found, empty MFA user list, metadata counts found/not-found/empty, and exception propagation for each route. Fixture files use cust-fixture-*/tool-fixture-* synthetic identifiers and @fixture.example.internal email domains.
+
+## WO-128: User Story: WO-128 - Preserve Code Scan Compatibility Contracts
+- **Status:** completed
+- **Commit:** `ef52831`
+- **Files:** 16 (+1071/-0)
+- **Duration:** 490ss
+- **Approach:** Created SfdcCodeScanController from scratch with 6 routes under /code-scan prefix. Created 5 model DTOs (ScanRule, ScanCategory, ScanRequest, ScanSummary, QualityGateResult), SfdcCodeScanService interface, and synthetic allRules.json resource with 5 fixture rule definitions. Submit route logs only pipelineId and stepId via SafeLogEvent (repositoryUrl and branch excluded). Cache-miss endpoints return 404 via Optional.map pattern. Created SfdcCodeScanControllerCompatibilityTest.java with 6 @Nested subclasses (CS-001 through CS-006) and 28 test methods locking all HTTP contracts.

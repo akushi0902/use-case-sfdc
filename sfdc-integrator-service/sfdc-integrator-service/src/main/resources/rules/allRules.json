@@ -1,0 +1,36 @@
+{
+  "_comment": "Synthetic rule definitions for Salesforce code scan. Category and severity values are illustrative — no proprietary rule logic, real thresholds, or customer data.",
+  "version": "1.0",
+  "rules": [
+    {
+      "ruleId": "SFDC-APEX-001",
+      "category": "APEX_SECURITY",
+      "severity": "CRITICAL",
+      "description": "SOQL injection risk in dynamic query construction"
+    },
+    {
+      "ruleId": "SFDC-APEX-002",
+      "category": "APEX_SECURITY",
+      "severity": "HIGH",
+      "description": "Hardcoded credential or secret value detected"
+    },
+    {
+      "ruleId": "SFDC-APEX-003",
+      "category": "APEX_QUALITY",
+      "severity": "MEDIUM",
+      "description": "Missing null check before object field access"
+    },
+    {
+      "ruleId": "SFDC-VF-001",
+      "category": "VISUALFORCE_SECURITY",
+      "severity": "HIGH",
+      "description": "XSS risk via unescaped output in Visualforce component"
+    },
+    {
+      "ruleId": "SFDC-FLOW-001",
+      "category": "FLOW_QUALITY",
+      "severity": "LOW",
+      "description": "Flow contains unused variables increasing maintenance cost"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+[
+  {
+    "_comment": "Synthetic scan rule fixture — no proprietary rule logic or customer data",
+    "ruleId": "SFDC-APEX-001",
+    "category": "APEX_SECURITY",
+    "severity": "CRITICAL",
+    "description": "SOQL injection risk in dynamic query construction"
+  },
+  {
+    "ruleId": "SFDC-APEX-002",
+    "category": "APEX_SECURITY",
+    "severity": "HIGH",
+    "description": "Hardcoded credential or secret value detected"
+  },
+  {
+    "ruleId": "SFDC-VF-001",
+    "category": "VISUALFORCE_SECURITY",
+    "severity": "HIGH",
+    "description": "XSS risk via unescaped output in Visualforce component"
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "_comment": "Synthetic scan categories fixture — no real scan configuration data",
+    "categoryId": "APEX_SECURITY",
+    "name": "Apex Security",
+    "ruleCount": 2
+  },
+  {
+    "categoryId": "VISUALFORCE_SECURITY",
+    "name": "Visualforce Security",
+    "ruleCount": 1
+  },
+  {
+    "categoryId": "FLOW_QUALITY",
+    "name": "Flow Quality",
+    "ruleCount": 1
+  }
+]
