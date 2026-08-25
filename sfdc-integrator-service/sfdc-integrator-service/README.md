@@ -1062,3 +1062,146 @@ docker run --rm -e COMMAND_TYPE=QUICK_DEPLOY sfdc-worker:dev dry-run
 | `unsupported-mode: 'foo'` | Wrong command argument | Use `self-test`, `dry-run`, or `execute <TYPE>` |
 | `unsupported-command-type: 'FOO'` | Unknown command type | Check supported types: QUICK_DEPLOY, DEPLOY, VALIDATE, ROLLBACK, PACKAGE, DIAGNOSTIC |
 | Self-test fails with `sf-cli-not-responding` | Node.js or SF CLI install failed | Rebuild image; check base image Node version compatibility |
+
+---
+
+## V2 Release API Canary Fallback Runbook
+
+The v2 release API (`POST /api/v2/sfdc/release-jobs`) supports configuration-driven canary
+controls. Operators can disable v2 submission globally or per operation type without a code
+change or redeployment. **Legacy routes (`/quickdeploy`, `/deploy`, `/validate`) are never
+affected by these flags.**
+
+### Configuration Reference
+
+Flags live under `sfdc.v2.release.routes.*` in `application.yaml` or in an overlay:
+
+```yaml
+sfdc:
+  v2:
+    release:
+      routes:
+        # Master kill switch — set to false to disable ALL v2 submission.
+        enabled: true
+        # Per-operation allow-list. Default-deny: unknown/unconfigured types are blocked
+        # even when enabled=true.
+        operations:
+          QUICK_DEPLOY: true
+          DEPLOY: true
+          VALIDATE: true
+          CANCEL: false
+        # When true, GET status lookups remain available during a submission disable window.
+        read-only-status-fallback: true
+```
+
+When a request is blocked, the controller returns:
+- **HTTP 422 Unprocessable Entity** (not 404 or 503)
+- JSON body with `errorCode`, `correlationId`, `message`, and `remediation` fields
+- `errorCode: V2_ROUTES_DISABLED` — global kill switch triggered
+- `errorCode: V2_OPERATION_DISABLED` — per-operation flag blocked the request
+- Telemetry outcome `disabledRoute` emitted via `sfdc.release.api.requests{outcome=disabledRoute}`
+
+### Disabling All V2 Submission (Global Rollback)
+
+1. Locate your environment's configuration override (Kubernetes ConfigMap, Vault, or `application-<env>.yaml`).
+2. Set `sfdc.v2.release.routes.enabled=false`.
+3. Restart the service (or trigger live-reload if supported):
+   ```bash
+   kubectl rollout restart deployment/sfdc-integrator-service -n <namespace>
+   kubectl rollout status deployment/sfdc-integrator-service -n <namespace>
+   ```
+4. Verify v2 requests return HTTP 422 (not 404):
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}" \
+     -X POST https://<host>/api/v2/sfdc/release-jobs \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <token>" \
+     -d '{"operationType":"QUICK_DEPLOY",...}'
+   # Expected: 422
+   ```
+5. Verify legacy routes still return HTTP 200 / 202:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}" \
+     -X POST https://<host>/quickdeploy \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <token>" \
+     -d '{...}'
+   # Expected: 200
+   ```
+6. Confirm no new v2 jobs are accepted by checking the telemetry counter:
+   `sfdc.release.api.requests{routeVersion=v2,outcome=disabledRoute}` — count should increase.
+   `sfdc.release.api.requests{routeVersion=v2,outcome=accepted}` — count should stay flat.
+
+### Disabling a Single Operation Type
+
+To disable only one operation (e.g. DEPLOY) while keeping QUICK_DEPLOY and VALIDATE active:
+
+1. Set `sfdc.v2.release.routes.operations.DEPLOY=false` in the configuration overlay.
+2. Restart or live-reload.
+3. Verify DEPLOY returns HTTP 422 with `errorCode: V2_OPERATION_DISABLED`.
+4. Verify QUICK_DEPLOY and VALIDATE still return HTTP 202.
+
+### Re-enabling V2 After Rollback
+
+1. Restore `sfdc.v2.release.routes.enabled=true` and the desired operations flags.
+2. Restart or live-reload.
+3. Verify v2 requests return HTTP 202 again.
+4. Confirm the `sfdc.release.api.requests{routeVersion=v2,outcome=accepted}` counter resumes climbing.
+
+### Verifying Legacy Route Health During Fallback
+
+Legacy routes are independent of v2 flags. To confirm they are serving traffic:
+
+```bash
+# Quick deploy (legacy)
+curl -s -w "\nHTTP %{http_code}\n" -X POST https://<host>/quickdeploy \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{...}'
+
+# Deploy (legacy)
+curl -s -w "\nHTTP %{http_code}\n" -X POST https://<host>/deploy \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{...}'
+```
+
+Both should return HTTP 200. If they do not, the issue is unrelated to v2 route flags.
+
+### Testing the Fallback Locally
+
+Run the MockMvc test suite to validate enabled/disabled behavior without a running service:
+
+```bash
+cd sfdc-integrator-service/sfdc-integrator-service
+
+# All controller canary tests
+./gradlew test --tests 'com.opsera.integrator.sfdc.controller.v2.ReleaseJobControllerCanaryTest' --no-daemon
+
+# Disabled-route structured response tests
+./gradlew test --tests 'com.opsera.integrator.sfdc.controller.v2.ReleaseJobControllerDisabledRouteTest' --no-daemon
+
+# Properties unit tests (allow-list, default-deny, global-disable precedence)
+./gradlew test --tests 'com.opsera.integrator.sfdc.config.V2ReleaseRoutesPropertiesTest' --no-daemon
+```
+
+### Fixture Configuration Snippets
+
+Reference YAML snippets for common scenarios are committed under
+`src/test/resources/fixtures/config/`:
+
+| File | Scenario |
+|---|---|
+| `v2-routes-disabled.yaml` | Global v2 disable — all submission returns 422 |
+| `v2-routes-quick-deploy-only.yaml` | Narrow canary — only QUICK_DEPLOY enabled |
+| `v2-routes-all-p0-enabled.yaml` | All P0 operations enabled (QUICK_DEPLOY, DEPLOY, VALIDATE) |
+| `v2-routes-unknown-op-denied.yaml` | Default-deny example — only explicitly listed types pass |
+
+### Escalation
+
+| Symptom | Action |
+|---|---|
+| v2 returns 422 unexpectedly in production | Check `sfdc.v2.release.routes.enabled` in the active ConfigMap. Re-enable if unintended. |
+| Legacy route returns 5xx during v2 disable | V2 flags do not affect legacy routes — investigate independently via `kubectl logs`. |
+| `sfdc.release.api.requests{outcome=disabledRoute}` is not emitted | Check `ReleaseCoexistenceTelemetry` is wired and `MeterRegistry` is available. |
+| HTTP 404 (not 422) on v2 submission | Indicates a stale deployment — verify the version with `V2ReleaseRoutesProperties` is running. |

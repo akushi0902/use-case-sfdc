@@ -70,6 +70,17 @@ sfdc:
         # Enable or disable the v2 release route family (/api/v2/sfdc/release-jobs).
         # Set to false for canary rollback without affecting legacy routes.
         enabled: true
+        # Per-operation allow-list. Default-deny: unconfigured operation types are blocked.
+        # Remove an operation type or set it to false to disable it without restarting the service
+        # (requires a live-reload capable configuration source in production).
+        operations:
+          QUICK_DEPLOY: true
+          DEPLOY: true
+          VALIDATE: true
+          CANCEL: false
+        # When true, GET status lookups for previously accepted jobs remain available even when
+        # v2 submission is globally disabled. Allows monitoring during a rollback window.
+        read-only-status-fallback: true
 
   worker-dispatch:
     # Master kill switch for Kubernetes worker dispatch.

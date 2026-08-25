@@ -1,0 +1,15 @@
+# Fixture: Only QUICK_DEPLOY is enabled in v2 release routes.
+# DEPLOY and VALIDATE return HTTP 422 with errorCode V2_OPERATION_DISABLED.
+# Use this configuration for a narrow canary targeting only quick-deploy consumers.
+
+sfdc:
+  v2:
+    release:
+      routes:
+        enabled: true
+        operations:
+          QUICK_DEPLOY: true
+          DEPLOY: false
+          VALIDATE: false
+          CANCEL: false
+        read-only-status-fallback: true

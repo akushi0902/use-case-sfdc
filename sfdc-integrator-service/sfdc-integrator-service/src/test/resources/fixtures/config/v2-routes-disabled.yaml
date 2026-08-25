@@ -1,0 +1,17 @@
+# Fixture: V2 release routes globally disabled.
+# Use this configuration snippet for canary rollback.
+# Legacy routes (/quickdeploy, /deploy, /validate) remain unaffected.
+#
+# When applied, POST /api/v2/sfdc/release-jobs returns HTTP 422 with errorCode V2_ROUTES_DISABLED.
+
+sfdc:
+  v2:
+    release:
+      routes:
+        enabled: false
+        operations:
+          QUICK_DEPLOY: true
+          DEPLOY: true
+          VALIDATE: true
+          CANCEL: false
+        read-only-status-fallback: true

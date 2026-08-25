@@ -1,5 +1,7 @@
 package com.opsera.integrator.sfdc.controller.v2;
 
+import com.opsera.integrator.sfdc.config.V2ReleaseRoutesProperties;
+import com.opsera.integrator.sfdc.correlation.CorrelationIdConstants;
 import com.opsera.integrator.sfdc.exceptions.ErrorResponse;
 import com.opsera.integrator.sfdc.logging.SafeLogEvent;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
@@ -16,7 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,9 +36,14 @@ import java.net.URI;
  * returns HTTP 202 Accepted with a {@code Location} header pointing to the job status URL.
  * Legacy routes at {@code /quickdeploy} and {@code /deploy} remain unchanged.
  *
- * <p>The route family can be disabled at runtime via the
- * {@code sfdc.v2.release.routes.enabled} property (default: {@code true}).
- * When disabled, any request to this path returns HTTP 404 without affecting legacy routes.
+ * <p>Route availability is governed by {@link V2ReleaseRoutesProperties}:
+ * <ul>
+ *   <li>When {@code sfdc.v2.release.routes.enabled=false}, all v2 submission requests return
+ *       HTTP 422 with a structured {@link ErrorResponse} carrying a correlation ID and
+ *       remediation hint. Legacy routes are not affected.</li>
+ *   <li>Per-operation flags in {@code sfdc.v2.release.routes.operations.*} deny specific
+ *       operation types. Unknown or unconfigured types fail closed (denied by default).</li>
+ * </ul>
  */
 @Tag(name = "V2 Release Jobs", description = "Typed release job commands. Use these endpoints for new integrations. "
         + "Legacy endpoints (/quickdeploy, /deploy) remain available during coexistence.")
@@ -44,17 +51,24 @@ import java.net.URI;
 @RequestMapping("/api/v2/sfdc/release-jobs")
 public class ReleaseJobController {
 
+    static final String ERROR_CODE_ROUTES_DISABLED = "V2_ROUTES_DISABLED";
+    static final String ERROR_CODE_OPERATION_DISABLED = "V2_OPERATION_DISABLED";
+    static final String REMEDIATION_LEGACY_FALLBACK =
+            "V2 submission is temporarily unavailable. Use the legacy endpoints "
+                    + "(/quickdeploy or /deploy) while v2 routes are disabled. "
+                    + "See the operator runbook for rollback and re-enablement steps.";
+
     private final ReleaseCommandFacade facade;
-    private final boolean routesEnabled;
+    private final V2ReleaseRoutesProperties routesProperties;
     private final SafeStructuredLogger safeLogger;
     private final ReleaseCoexistenceTelemetry telemetry;
 
     public ReleaseJobController(ReleaseCommandFacade facade,
-            @Value("${sfdc.v2.release.routes.enabled:true}") boolean routesEnabled,
+            V2ReleaseRoutesProperties routesProperties,
             SafeStructuredLogger safeLogger,
             ReleaseCoexistenceTelemetry telemetry) {
         this.facade = facade;
-        this.routesEnabled = routesEnabled;
+        this.routesProperties = routesProperties;
         this.safeLogger = safeLogger;
         this.telemetry = telemetry;
     }
@@ -64,7 +78,7 @@ public class ReleaseJobController {
      *
      * <p>Returns HTTP 202 with a {@code Location} header and an
      * {@link AcceptedAcknowledgement} body on success.
-     * Returns HTTP 404 when the v2 route family is disabled.
+     * Returns HTTP 422 when the v2 route family or the specific operation is disabled.
      * Returns HTTP 400 on validation failure (handled by {@code SfdcExceptionHandler}).
      * Returns HTTP 422 when the operation type is not yet supported.
      */
@@ -73,6 +87,7 @@ public class ReleaseJobController {
             description = "Accepts a typed release command (DEPLOY, VALIDATE, QUICK_DEPLOY) for asynchronous "
                     + "execution. Returns 202 Accepted immediately with a jobId and statusUrl for polling. "
                     + "CANCEL returns 422 until full implementation is available. "
+                    + "Returns 422 when v2 routes are disabled via operator configuration. "
                     + "Requires a valid Bearer JWT in the Authorization header.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses({
@@ -91,9 +106,7 @@ public class ReleaseJobController {
             @ApiResponse(responseCode = "403", description = "Insufficient scope — JWT does not grant the required release permission",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "V2 route family is disabled in this deployment",
-                    content = @Content),
-            @ApiResponse(responseCode = "422", description = "Operation type not yet supported (e.g. CANCEL)",
+            @ApiResponse(responseCode = "422", description = "V2 routes disabled or operation not permitted by current configuration",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = ErrorResponse.class)))
     })
@@ -103,21 +116,19 @@ public class ReleaseJobController {
         String operationType = request.getOperationType() != null
                 ? ReleaseCoexistenceTelemetry.resolveOperationType(request.getOperationType().name())
                 : ReleaseCoexistenceTelemetry.OPERATION_UNKNOWN;
+        String correlationId = resolveCorrelationId();
 
-        if (!routesEnabled) {
-            safeLogger.logEvent(SafeLogEvent.builder()
-                    .operation("v2-release-submit")
-                    .controller("ReleaseJobController")
-                    .outcome(SafeLogEvent.Outcome.REJECTED)
-                    .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)
-                    .safeField("operationType", operationType)
-                    .safeField("outcome", ReleaseCoexistenceTelemetry.OUTCOME_DISABLED_ROUTE)
-                    .build());
-            telemetry.record(ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2, operationType,
-                    ReleaseCoexistenceTelemetry.OUTCOME_DISABLED_ROUTE,
-                    ReleaseCoexistenceTelemetry.ENDPOINT_SUBMISSION,
-                    System.currentTimeMillis() - startMs);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        if (!routesProperties.isEnabled()) {
+            return buildDisabledResponse(correlationId, operationType, startMs,
+                    ERROR_CODE_ROUTES_DISABLED,
+                    "V2 release routes are globally disabled by operator configuration.");
+        }
+
+        if (!routesProperties.isOperationEnabled(request.getOperationType() != null
+                ? request.getOperationType().name() : "")) {
+            return buildDisabledResponse(correlationId, operationType, startMs,
+                    ERROR_CODE_OPERATION_DISABLED,
+                    "Operation type '" + operationType + "' is not enabled in the v2 release routes configuration.");
         }
 
         AcceptedAcknowledgement ack = facade.accept(request);
@@ -139,5 +150,33 @@ public class ReleaseJobController {
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .location(location)
                 .body(ack);
+    }
+
+    private ResponseEntity<ErrorResponse> buildDisabledResponse(String correlationId,
+                                                                  String operationType,
+                                                                  long startMs,
+                                                                  String errorCode,
+                                                                  String message) {
+        safeLogger.logEvent(SafeLogEvent.builder()
+                .operation("v2-release-submit")
+                .controller("ReleaseJobController")
+                .outcome(SafeLogEvent.Outcome.REJECTED)
+                .safeField("routeVersion", ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2)
+                .safeField("operationType", operationType)
+                .safeField("outcome", ReleaseCoexistenceTelemetry.OUTCOME_DISABLED_ROUTE)
+                .build());
+        telemetry.record(ReleaseCoexistenceTelemetry.ROUTE_VERSION_V2, operationType,
+                ReleaseCoexistenceTelemetry.OUTCOME_DISABLED_ROUTE,
+                ReleaseCoexistenceTelemetry.ENDPOINT_SUBMISSION,
+                System.currentTimeMillis() - startMs);
+
+        ErrorResponse error = new ErrorResponse(correlationId, errorCode, message,
+                REMEDIATION_LEGACY_FALLBACK);
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(error);
+    }
+
+    private String resolveCorrelationId() {
+        String id = MDC.get(CorrelationIdConstants.MDC_KEY);
+        return id != null && !id.isBlank() ? id : "unknown";
     }
 }

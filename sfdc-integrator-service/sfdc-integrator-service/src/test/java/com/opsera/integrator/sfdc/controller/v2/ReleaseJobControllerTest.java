@@ -1,6 +1,7 @@
 package com.opsera.integrator.sfdc.controller.v2;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opsera.integrator.sfdc.config.V2ReleaseRoutesProperties;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.exceptions.V2UnsupportedOperationException;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
@@ -10,18 +11,19 @@ import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseLifecycleState;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseOperationType;
 import com.opsera.integrator.sfdc.services.v2.ReleaseCommandFacade;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -58,10 +60,19 @@ class ReleaseJobControllerTest {
     private ReleaseCommandFacade releaseCommandFacade;
 
     @MockBean
+    private V2ReleaseRoutesProperties routesProperties;
+
+    @MockBean
     private SafeStructuredLogger safeLogger;
 
     @MockBean
     private ReleaseCoexistenceTelemetry telemetry;
+
+    @BeforeEach
+    void setUp() {
+        when(routesProperties.isEnabled()).thenReturn(true);
+        when(routesProperties.isOperationEnabled(anyString())).thenReturn(true);
+    }
 
     // ---- Valid submissions ----
 
