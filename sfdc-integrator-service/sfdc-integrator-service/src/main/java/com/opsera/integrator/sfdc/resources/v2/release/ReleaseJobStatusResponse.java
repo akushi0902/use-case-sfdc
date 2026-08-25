@@ -65,6 +65,9 @@ public class ReleaseJobStatusResponse {
             example = "DURABLE_LIFECYCLE")
     private String statusSource;
 
+    @Schema(description = "Advisory rollback decision support fields. Present for all P0 release jobs.")
+    private RollbackDecision rollbackDecision;
+
     public ReleaseJobStatusResponse() {
         this.checkpoints = new ArrayList<>();
         this.safeWarnings = new ArrayList<>();
@@ -110,6 +113,11 @@ public class ReleaseJobStatusResponse {
 
     public String getStatusSource() { return statusSource; }
     public void setStatusSource(String statusSource) { this.statusSource = statusSource; }
+
+    public RollbackDecision getRollbackDecision() { return rollbackDecision; }
+    public void setRollbackDecision(RollbackDecision rollbackDecision) {
+        this.rollbackDecision = rollbackDecision;
+    }
 
     @Override
     public String toString() {

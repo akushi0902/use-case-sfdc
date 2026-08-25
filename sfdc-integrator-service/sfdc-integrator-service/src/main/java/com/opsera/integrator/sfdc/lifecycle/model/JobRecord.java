@@ -30,6 +30,16 @@ public class JobRecord {
     private Instant expiresAt;
     private long version;
 
+    // Rollback decision fields (V7 migration)
+    private Boolean rollbackEligible;
+    private Boolean rollbackRecommended;
+    private String rollbackReasonCode;
+    private String failedStage;
+    private String lastSuccessfulCheckpoint;
+    /** Sanitized diagnostic summary; max 512 chars; no credentials or raw payloads. */
+    private String rollbackDiagnosticSummary;
+    private Instant rollbackUpdatedAt;
+
     public JobRecord() {}
 
     public String getJobId() { return jobId; }
@@ -70,6 +80,31 @@ public class JobRecord {
 
     public long getVersion() { return version; }
     public void setVersion(long version) { this.version = version; }
+
+    public Boolean getRollbackEligible() { return rollbackEligible; }
+    public void setRollbackEligible(Boolean rollbackEligible) { this.rollbackEligible = rollbackEligible; }
+
+    public Boolean getRollbackRecommended() { return rollbackRecommended; }
+    public void setRollbackRecommended(Boolean rollbackRecommended) { this.rollbackRecommended = rollbackRecommended; }
+
+    public String getRollbackReasonCode() { return rollbackReasonCode; }
+    public void setRollbackReasonCode(String rollbackReasonCode) { this.rollbackReasonCode = rollbackReasonCode; }
+
+    public String getFailedStage() { return failedStage; }
+    public void setFailedStage(String failedStage) { this.failedStage = failedStage; }
+
+    public String getLastSuccessfulCheckpoint() { return lastSuccessfulCheckpoint; }
+    public void setLastSuccessfulCheckpoint(String lastSuccessfulCheckpoint) {
+        this.lastSuccessfulCheckpoint = lastSuccessfulCheckpoint;
+    }
+
+    public String getRollbackDiagnosticSummary() { return rollbackDiagnosticSummary; }
+    public void setRollbackDiagnosticSummary(String rollbackDiagnosticSummary) {
+        this.rollbackDiagnosticSummary = rollbackDiagnosticSummary;
+    }
+
+    public Instant getRollbackUpdatedAt() { return rollbackUpdatedAt; }
+    public void setRollbackUpdatedAt(Instant rollbackUpdatedAt) { this.rollbackUpdatedAt = rollbackUpdatedAt; }
 
     @Override
     public String toString() {

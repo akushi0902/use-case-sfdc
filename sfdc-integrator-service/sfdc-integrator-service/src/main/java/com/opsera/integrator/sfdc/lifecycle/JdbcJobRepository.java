@@ -177,8 +177,22 @@ public class JdbcJobRepository implements JobRepository {
         if (updated != null) job.setUpdatedAt(updated.toInstant());
         Timestamp expires = rs.getTimestamp("expires_at");
         if (expires != null) job.setExpiresAt(expires.toInstant());
+        // Rollback decision fields (V7)
+        job.setRollbackEligible(nullableBool(rs, "rollback_eligible"));
+        job.setRollbackRecommended(nullableBool(rs, "rollback_recommended"));
+        job.setRollbackReasonCode(rs.getString("rollback_reason_code"));
+        job.setFailedStage(rs.getString("failed_stage"));
+        job.setLastSuccessfulCheckpoint(rs.getString("last_successful_checkpoint"));
+        job.setRollbackDiagnosticSummary(rs.getString("rollback_diagnostic_summary"));
+        Timestamp rollbackUpdated = rs.getTimestamp("rollback_updated_at");
+        if (rollbackUpdated != null) job.setRollbackUpdatedAt(rollbackUpdated.toInstant());
         return job;
     };
+
+    private static Boolean nullableBool(java.sql.ResultSet rs, String col) throws java.sql.SQLException {
+        boolean val = rs.getBoolean(col);
+        return rs.wasNull() ? null : val;
+    }
 
     private static final RowMapper<JobCheckpoint> CHECKPOINT_ROW_MAPPER = (rs, rowNum) -> {
         JobCheckpoint cp = new JobCheckpoint();

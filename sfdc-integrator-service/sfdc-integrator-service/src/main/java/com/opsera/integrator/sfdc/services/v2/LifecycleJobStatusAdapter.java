@@ -8,10 +8,12 @@ import com.opsera.integrator.sfdc.lifecycle.model.JobRecord;
 import com.opsera.integrator.sfdc.resources.v2.release.CheckpointSummary;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseJobStatusResponse;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseLifecycleState;
+import com.opsera.integrator.sfdc.resources.v2.release.RollbackDecision;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -48,9 +50,12 @@ public class LifecycleJobStatusAdapter implements JobStatusAdapter {
     static final int MAX_DIAGNOSTIC_LENGTH = 512;
 
     private final JobRepository jobRepository;
+    private final RollbackDecisionMapper rollbackDecisionMapper;
 
-    public LifecycleJobStatusAdapter(JobRepository jobRepository) {
+    public LifecycleJobStatusAdapter(JobRepository jobRepository,
+                                     RollbackDecisionMapper rollbackDecisionMapper) {
         this.jobRepository = jobRepository;
+        this.rollbackDecisionMapper = rollbackDecisionMapper;
     }
 
     /**
@@ -79,6 +84,11 @@ public class LifecycleJobStatusAdapter implements JobStatusAdapter {
         response.setCheckpoints(mapCheckpoints(checkpoints));
         response.setSafeDiagnosticSummary(buildDiagnosticSummary(job, checkpoints));
         response.setStatusSource(STATUS_SOURCE_LABEL);
+
+        ReleaseLifecycleState publicState = mapState(job.getCurrentState());
+        RollbackDecision rollbackDecision = rollbackDecisionMapper.map(
+                job.getOperationType(), publicState, checkpoints, Instant.now());
+        response.setRollbackDecision(rollbackDecision);
 
         return Optional.of(response);
     }

@@ -1,0 +1,18 @@
+{
+  "_comment": "Fixture: QUICK_DEPLOY cancelled with no apply checkpoint — not rollback-eligible",
+  "jobId": "rd-fixture-cancelled-qd-001",
+  "correlationId": "corr-rd-cancelled-qd-001",
+  "operationType": "QUICK_DEPLOY",
+  "currentState": "CANCELLED",
+  "checkpoints": [
+    {"sequenceNumber": 1, "checkpointCode": "PRE_VALIDATE_OK",   "stateAtCheckpoint": "RUNNING",   "safeMessage": "Quick deploy pre-check passed"},
+    {"sequenceNumber": 2, "checkpointCode": "CANCEL_REQUESTED",  "stateAtCheckpoint": "CANCELLED", "safeMessage": "Cancellation requested before apply"}
+  ],
+  "expectedRollbackDecision": {
+    "rollbackEligible": false,
+    "rollbackRecommended": false,
+    "rollbackReasonCode": "CANCELLED_NO_CHANGES_APPLIED",
+    "failedStage": "CANCELLATION",
+    "lastSuccessfulCheckpoint": "CANCEL_REQUESTED"
+  }
+}

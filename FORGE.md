@@ -399,3 +399,10 @@
 - **Files:** 26 (+1793/-0)
 - **Duration:** 521ss
 - **Approach:** Created a new services/prevalidate package implementing a typed, XXE-safe, strategy-based prevalidation subsystem. PrevalidateComponentsService.validate(PrevalidationContext) is the public entry point for release submission flows. SafeXmlParser disables DOCTYPE, external entities, and entity expansion, plus enforces a configurable byte limit. ComponentReferenceExtractor dispatches to registered ReferenceExtractionStrategy beans (Profile, PermissionSet, Layout, Report, ApexClass) and de-duplicates members. PrevalidationResult carries FindingSeverity-classified PrevalidationFinding objects — HARD_FAILURE blocks submission, WARNING is advisory. All finding summaries use safe template strings with no raw XML, credentials, or user-supplied content. No existing code was modified.
+
+## WO-155: User Story: WO-155 - Add Rollback Decision Status Fields
+- **Status:** completed
+- **Commit:** `08dbd65`
+- **Files:** 16 (+1134/-1)
+- **Duration:** 606ss
+- **Approach:** Added rollback decision support as status enrichment (not rollback execution). Created RollbackReasonCode and FailedStage enums, RollbackDecision DTO (builder pattern), and RollbackDecisionMapper @Component that deterministically derives advisory fields from operationType, ReleaseLifecycleState, and JobCheckpoint history. Extended ReleaseJobStatusResponse with a rollbackDecision field. Extended LifecycleJobStatusAdapter to call RollbackDecisionMapper in findByJobId(). Added V7 Flyway migration extending the jobs table with rollback_eligible, rollback_recommended, rollback_reason_code, failed_stage, last_successful_checkpoint, rollback_diagnostic_summary, and rollback_updated_at. Extended JobRecord and JdbcJobRepository to persist and fetch the new columns. All diagnosticSummary values are sourced from checkpoint safeMessage fields, truncated at 256 chars, and never include raw logs, stack traces, or credentials.
