@@ -5,6 +5,7 @@ import com.opsera.integrator.sfdc.lifecycle.model.JobDiagnostic;
 import com.opsera.integrator.sfdc.lifecycle.model.JobRecord;
 import com.opsera.integrator.sfdc.lifecycle.model.WorkerAttempt;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,4 +64,17 @@ public interface JobRepository {
      * Throws if the (jobId, attemptNumber) combination already exists.
      */
     void saveWorkerAttempt(WorkerAttempt attempt);
+
+    /**
+     * Returns active jobs (ACCEPTED, DISPATCHING, or RUNNING) whose last state update
+     * was before {@code staleBefore}, ordered by {@code updated_at} ascending.
+     *
+     * <p>Callers are responsible for applying per-state grace-period filtering on the
+     * returned list (e.g. skipping freshly accepted jobs with no checkpoints).
+     *
+     * @param staleBefore upper-bound on {@code updated_at} for stale candidates
+     * @param maxResults  maximum number of rows to return
+     * @return stale active job records, may be empty
+     */
+    List<JobRecord> findStaleActiveJobs(Instant staleBefore, int maxResults);
 }

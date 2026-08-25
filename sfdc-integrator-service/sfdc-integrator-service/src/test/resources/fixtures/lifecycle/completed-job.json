@@ -1,0 +1,27 @@
+{
+  "_comment": "Fixture: COMPLETED terminal job. Must never be timed out by the monitor.",
+  "jobId": "job-fixture-completed-005",
+  "correlationId": "cid-fixture-completed-005",
+  "operationType": "QUICK_DEPLOY",
+  "currentState": "COMPLETED",
+  "customerIdHash": "e5f6789012345678901234567890123456789012345678901234567890abcdef",
+  "sfdcToolId": "sfdc-tool-fixture-complete-001",
+  "pipelineId": "pipeline-fixture-complete-001",
+  "stepId": "step-complete-qd-005",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 3,
+  "checkpoints": [
+    {
+      "sequenceNumber": 1,
+      "checkpointCode": "WORKER_EXECUTION_STARTED",
+      "stateAtCheckpoint": "RUNNING",
+      "safeMessage": "Worker started"
+    },
+    {
+      "sequenceNumber": 2,
+      "checkpointCode": "EXECUTION_COMPLETED",
+      "stateAtCheckpoint": "COMPLETED",
+      "safeMessage": "Deployment succeeded"
+    }
+  ]
+}

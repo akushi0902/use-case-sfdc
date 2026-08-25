@@ -1205,3 +1205,84 @@ Reference YAML snippets for common scenarios are committed under
 | Legacy route returns 5xx during v2 disable | V2 flags do not affect legacy routes — investigate independently via `kubectl logs`. |
 | `sfdc.release.api.requests{outcome=disabledRoute}` is not emitted | Check `ReleaseCoexistenceTelemetry` is wired and `MeterRegistry` is available. |
 | HTTP 404 (not 422) on v2 submission | Indicates a stale deployment — verify the version with `V2ReleaseRoutesProperties` is running. |
+
+## Stalled Job Timeout Monitor Runbook
+
+### Overview
+
+The `JobTimeoutMonitor` is a scheduled Spring component that detects active jobs with no state
+progress beyond the configured stale-progress threshold and finalizes them as `TIMED_OUT`.
+It runs on a fixed-delay schedule and is safe to execute concurrently across multiple replicas
+through optimistic concurrency in the lifecycle service.
+
+### Configuration Reference
+
+| Property | Default | Description |
+|---|---|---|
+| `sfdc.lifecycle.timeout.enabled` | `true` | Master kill switch. Set `false` during emergency maintenance. |
+| `sfdc.lifecycle.timeout.scan-interval-seconds` | `300` | Seconds between scans (fixed delay). |
+| `sfdc.lifecycle.timeout.stale-threshold-minutes` | `240` | Minutes without state change before a job is stale. |
+| `sfdc.lifecycle.timeout.accepted-grace-period-minutes` | `30` | Grace period for ACCEPTED jobs awaiting dispatch. |
+| `sfdc.lifecycle.timeout.max-jobs-per-scan` | `100` | Max jobs finalized per scan. Caps blast radius. |
+
+### Disabling the Monitor (Emergency Maintenance)
+
+1. Identify the active ConfigMap or environment override for the target pod:
+   ```
+   kubectl get configmap sfdc-integrator-config -n <namespace> -o yaml
+   ```
+2. Patch the `enabled` flag:
+   ```
+   kubectl patch configmap sfdc-integrator-config -n <namespace> \
+     --type merge -p '{"data":{"SFDC_LIFECYCLE_TIMEOUT_ENABLED":"false"}}'
+   ```
+3. Restart the pod to pick up the change (or use a live-reload configuration source):
+   ```
+   kubectl rollout restart deployment/sfdc-integrator-service -n <namespace>
+   ```
+4. Verify the monitor is no longer scanning by checking application logs for:
+   `timeout-monitor disabled — skipping scan`
+5. Re-enable by reversing the patch and rolling out again.
+
+### Investigating a Timed-Out Job
+
+1. Look up the job record by jobId or correlationId in the `jobs` table.
+2. Read the terminal diagnostic from `job_diagnostics` — the `safe_summary` column contains
+   `operationType`, `elapsedSeconds`, `lastCheckpointCode`, `failingStage`, and `retryEligibility`.
+3. Inspect checkpoint history in `job_checkpoints` ordered by `sequence_number` for the last
+   active stage before the timeout.
+4. Check audit events in `audit_events` with `operation = 'JOB_TIMEOUT_FINALIZED'` for the
+   finalizing actor and timestamp.
+
+### Metrics
+
+| Metric | Tags | Description |
+|---|---|---|
+| `sfdc.lifecycle.timeout.scan.total` | `result=ok` | Incremented on each completed scan. |
+| `sfdc.lifecycle.timeout.finalized` | `operationType` | Incremented per job finalized as TIMED_OUT. |
+| `sfdc.lifecycle.timeout.skipped` | `reason` | Incremented per skipped job (grace_period, concurrency_conflict, already_terminal). |
+| `sfdc.lifecycle.timeout.errors` | `reason` | Incremented on per-job errors or query failures. |
+
+### Fixture Reference
+
+Test fixtures for the timeout monitor are committed under `src/test/resources/fixtures/lifecycle/`:
+
+| File | Scenario |
+|---|---|
+| `stale-running-job.json` | RUNNING job updated >240 min ago — timeout candidate |
+| `fresh-running-job.json` | RUNNING job updated recently — must not be timed out |
+| `stale-accepted-outside-grace.json` | ACCEPTED job >30 min old with no checkpoints — timeout candidate |
+| `stale-accepted-within-grace.json` | ACCEPTED job within grace period — protected |
+| `completed-job.json` | COMPLETED terminal job — never touched by monitor |
+| `failed-job-with-checkpoints.json` | FAILED terminal job with checkpoint history |
+| `checkpoint-less-accepted-job.json` | ACCEPTED job recently created, no checkpoints — grace applies |
+
+### Escalation
+
+| Symptom | Action |
+|---|---|
+| Jobs stuck in RUNNING/DISPATCHING for >6 hours | Check `sfdc.lifecycle.timeout.enabled=true` and `stale-threshold-minutes` config. |
+| Monitor scan count stagnant | Check `sfdc.lifecycle.timeout.scan.total` metric and `sfdc.lifecycle.timeout.errors`. |
+| Healthy long-running jobs being timed out | Increase `stale-threshold-minutes`. Default 240 covers 4-hour Salesforce deployments. |
+| Monitor running on only one replica but you have multiple pods | Expected — optimistic concurrency ensures concurrent scans are safe. |
+| `TIMED_OUT` jobs showing wrong diagnostic fields | Review `job_diagnostics.safe_summary` — never contains credentials or stack traces. |

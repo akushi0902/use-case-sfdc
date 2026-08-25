@@ -205,9 +205,21 @@ public class JobLifecycleService {
      * Convenience: transitions job to {@code TIMED_OUT}.
      */
     public TransitionResult markTimedOut(String jobId, String correlationId) {
+        return markTimedOut(jobId, correlationId, null);
+    }
+
+    /**
+     * Convenience: transitions job to {@code TIMED_OUT} with a safe diagnostic summary.
+     *
+     * @param safeDiagnosticSummary allow-listed operator-readable summary; must not contain
+     *                              raw stack traces, tokens, credentials, or CLI output
+     */
+    public TransitionResult markTimedOut(String jobId, String correlationId,
+                                         String safeDiagnosticSummary) {
         return transition(TransitionRequest.builder(jobId, JobLifecycleState.TIMED_OUT)
                 .correlationId(correlationId)
                 .safeReasonCode("EXECUTION_TIMEOUT")
+                .safeDiagnosticSummary(safeDiagnosticSummary)
                 .checkpointCode("JOB_TIMED_OUT")
                 .build());
     }

@@ -1,0 +1,27 @@
+{
+  "_comment": "Fixture: FAILED terminal job with checkpoint history. Monitor must not re-finalize.",
+  "jobId": "job-fixture-failed-ckpts-006",
+  "correlationId": "cid-fixture-failed-ckpts-006",
+  "operationType": "DEPLOY",
+  "currentState": "FAILED",
+  "customerIdHash": "f6789012345678901234567890123456789012345678901234567890abcdef01",
+  "sfdcToolId": "sfdc-tool-fixture-failed-001",
+  "pipelineId": "pipeline-fixture-failed-001",
+  "stepId": "step-failed-deploy-006",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 2,
+  "checkpoints": [
+    {
+      "sequenceNumber": 1,
+      "checkpointCode": "WORKER_EXECUTION_STARTED",
+      "stateAtCheckpoint": "RUNNING",
+      "safeMessage": "Worker started"
+    },
+    {
+      "sequenceNumber": 2,
+      "checkpointCode": "DEPLOY_STAGE_FAILED",
+      "stateAtCheckpoint": "FAILED",
+      "safeMessage": "Metadata deploy failed — see diagnostic"
+    }
+  ]
+}

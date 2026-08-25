@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -126,6 +127,15 @@ public class JdbcJobRepository implements JobRepository {
                     "Failed to save worker attempt: jobId=" + attempt.getJobId() +
                     " attempt=" + attempt.getAttemptNumber(), ex);
         }
+    }
+
+    @Override
+    public List<JobRecord> findStaleActiveJobs(Instant staleBefore, int maxResults) {
+        Timestamp threshold = Timestamp.from(staleBefore);
+        return jdbc.query(
+                "SELECT * FROM jobs WHERE current_state IN ('ACCEPTED','DISPATCHING','RUNNING') " +
+                "AND updated_at < ? ORDER BY updated_at ASC LIMIT ?",
+                JOB_ROW_MAPPER, threshold, maxResults);
     }
 
     // ---- Row mappers ----

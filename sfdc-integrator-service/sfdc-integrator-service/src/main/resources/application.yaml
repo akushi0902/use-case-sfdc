@@ -183,6 +183,22 @@ logging:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 sfdc:
+  lifecycle:
+    timeout:
+      # Set to false to disable the stalled-job timeout monitor during emergency maintenance.
+      enabled: true
+      # Interval between monitor scans (seconds). Default 300 (5 min) limits DB load
+      # while detecting stale jobs within one polling interval after the threshold elapses.
+      scan-interval-seconds: 300
+      # Jobs with no state change for longer than this threshold are timed out.
+      # Default 240 min (4 hours) covers the longest expected Salesforce full-org deployment.
+      stale-threshold-minutes: 240
+      # Minimum time after acceptance before a job with no checkpoints can be timed out.
+      # Protects freshly accepted jobs awaiting worker dispatch.
+      accepted-grace-period-minutes: 30
+      # Maximum jobs finalized per scan — caps the blast radius of a single monitor run.
+      max-jobs-per-scan: 100
+
   checkpoint:
     kafka:
       # Set to true to enable the KafkaCheckpointListener.

@@ -1,0 +1,28 @@
+{
+  "_comment": "Fixture: RUNNING job last updated <240 min ago. Must NOT be timed out.",
+  "jobId": "job-fixture-fresh-running-002",
+  "correlationId": "cid-fixture-fresh-running-002",
+  "operationType": "QUICK_DEPLOY",
+  "currentState": "RUNNING",
+  "customerIdHash": "b2c3d4e5f678901234567890123456789012345678901234567890123456bcde",
+  "sfdcToolId": "sfdc-tool-fixture-fresh-001",
+  "pipelineId": "pipeline-fixture-fresh-001",
+  "stepId": "step-fresh-qd-002",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 1,
+  "freshOffsetMinutes": 30,
+  "checkpoints": [
+    {
+      "sequenceNumber": 1,
+      "checkpointCode": "WORKER_EXECUTION_STARTED",
+      "stateAtCheckpoint": "RUNNING",
+      "safeMessage": "Worker started execution"
+    },
+    {
+      "sequenceNumber": 2,
+      "checkpointCode": "DEPLOY_STAGE_IN_PROGRESS",
+      "stateAtCheckpoint": "RUNNING",
+      "safeMessage": "Deploy stage still active"
+    }
+  ]
+}
