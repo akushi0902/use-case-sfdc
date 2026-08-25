@@ -1,0 +1,27 @@
+{
+  "_comment": "Fixture: job in RUNNING state with one checkpoint logged. Worker attempt 1 started.",
+  "jobId": "job-fixture-running-002",
+  "correlationId": "cid-fixture-running-002",
+  "operationType": "DEPLOY",
+  "currentState": "RUNNING",
+  "customerIdHash": "b2c3d4e5f678901234567890123456789012345678901234567890123456789c",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-deploy-fixture-002",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 1,
+  "checkpoints": [
+    {
+      "sequenceNumber": 1,
+      "checkpointCode": "DISPATCH_STARTED",
+      "stateAtCheckpoint": "RUNNING",
+      "safeMessage": "Worker dispatch initiated"
+    }
+  ],
+  "workerAttempts": [
+    {
+      "attemptNumber": 1,
+      "workerId": "worker-pod-fixture-001"
+    }
+  ]
+}

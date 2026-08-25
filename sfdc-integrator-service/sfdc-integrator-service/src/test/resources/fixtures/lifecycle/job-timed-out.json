@@ -1,0 +1,24 @@
+{
+  "_comment": "Fixture: job in FAILED state due to worker timeout. Worker attempt shows TIMED_OUT outcome.",
+  "jobId": "job-fixture-timeout-006",
+  "correlationId": "cid-fixture-timeout-006",
+  "operationType": "DEPLOY",
+  "currentState": "FAILED",
+  "customerIdHash": "f678901234567890123456789012345678901234567890123456789012ef0123",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "pipelineId": "pipeline-fixture-002",
+  "stepId": "step-deploy-fixture-006",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 2,
+  "workerAttempts": [
+    {
+      "attemptNumber": 1,
+      "workerId": "worker-pod-fixture-003",
+      "outcome": "TIMED_OUT"
+    }
+  ],
+  "diagnostic": {
+    "safeSummary": "Worker execution exceeded SLO timeout threshold",
+    "errorCode": "WORKER_TIMEOUT"
+  }
+}
