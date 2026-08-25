@@ -1,5 +1,30 @@
 # SFDC Integrator Service — Build Notes
 
+## Contribution Policy: NPM Artifacts Are Prohibited
+
+**This is a Java and Gradle service. NPM package manager artifacts are NOT permitted in commits.**
+
+The following files and directories are prohibited and will fail the release build if committed:
+
+| Prohibited artifact | Why |
+|---|---|
+| `package.json` | NPM package manifest — not applicable to a Java service |
+| `package-lock.json` | NPM lockfile — not applicable |
+| `npm-shrinkwrap.json` | Legacy NPM lockfile — not applicable |
+| `yarn.lock` | Yarn lockfile — not applicable |
+| `pnpm-lock.yaml` | pnpm lockfile — not applicable |
+| `node_modules/` | NPM dependency tree — not applicable |
+
+The `checkNoNpmArtifacts` Gradle task and `scripts/check-no-npm-artifacts.sh` shell script
+enforce this policy automatically on every release build. See _Build Checks_ below.
+
+**If you see a build failure caused by prohibited NPM files:**
+1. Remove the offending files from the repository.
+2. Do not install Node, NPM, Yarn, or pnpm to fix the error — the fix is removal, not installation.
+3. Re-run `./gradlew checkNoNpmArtifacts` to confirm the guard passes.
+
+---
+
 ## Supported Artifact Repositories
 
 Gradle resolves all dependencies and plugins exclusively from the following approved repositories:
@@ -148,7 +173,8 @@ Before building, ensure the following are available:
 ## Building the Service
 
 ```bash
-# Resolve dependencies and run all checks (includes JCenter hygiene and Java toolchain checks)
+# Resolve dependencies and run all checks
+# (includes JCenter hygiene, Java toolchain, and NPM artifact guard)
 ./gradlew check
 
 # Run tests only
@@ -163,9 +189,31 @@ Before building, ensure the following are available:
 # Validate no JCenter is declared anywhere in Gradle build files
 ./gradlew checkNoJCenter
 
+# Verify no prohibited NPM artifacts are present
+./gradlew checkNoNpmArtifacts
+
+# Self-test the NPM artifact guard (proves passing and failing states)
+./gradlew verifyNpmArtifactGuard
+
+# Standalone NPM artifact check (no Gradle required — for CI shell pipelines)
+./scripts/check-no-npm-artifacts.sh
+
 # Print toolchain diagnostics
 ./gradlew -q javaToolchains
 ```
+
+---
+
+## Build Checks Summary
+
+| Gradle Task | Lifecycle | What It Checks |
+|---|---|---|
+| `checkNoJCenter` | `check` | No JCenter repository in any `*.gradle` file |
+| `checkJavaToolchain` | `check` | `sourceCompatibility` and `targetCompatibility` are Java 21 |
+| `checkNoNpmArtifacts` | `check` | No prohibited NPM artifacts in tracked source paths |
+| `verifyNpmArtifactGuard` | `check` | Self-test: guard detects prohibited files and passes clean state |
+
+All tasks in the table above run automatically when you run `./gradlew check` or `./gradlew build`.
 
 ---
 

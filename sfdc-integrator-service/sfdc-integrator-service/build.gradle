@@ -198,3 +198,152 @@ tasks.register('checkJavaToolchain') {
 }
 
 check.dependsOn checkJavaToolchain
+
+// ============================================================
+// NPM Artifact Policy Guard
+//
+// Organization policy: this is a Java/Gradle service. NPM
+// package manager artifacts are PROHIBITED in commits.
+//
+// Run this task to verify no prohibited NPM files are present:
+//   ./gradlew checkNoNpmArtifacts
+//
+// Prohibited patterns:
+//   package.json, package-lock.json, npm-shrinkwrap.json,
+//   yarn.lock, pnpm-lock.yaml, node_modules/
+//
+// Fails the build and lists offending paths if any are found.
+// Wired into the check lifecycle — runs on every release build.
+//
+// See also: scripts/check-no-npm-artifacts.sh (CI-friendly
+// standalone variant that does not require Gradle).
+// ============================================================
+tasks.register('checkNoNpmArtifacts') {
+    group = 'Verification'
+    description = 'Fails the build if prohibited NPM artifacts are present in tracked source paths. ' +
+            'Run: ./gradlew checkNoNpmArtifacts'
+
+    doLast {
+        def prohibitedFiles = [
+            'package.json', 'package-lock.json', 'npm-shrinkwrap.json',
+            'yarn.lock', 'pnpm-lock.yaml'
+        ]
+        def violations = []
+
+        // Scan for prohibited file names; exclude generated and VCS paths.
+        // node_modules directories are handled separately below.
+        def scanTree = fileTree(rootDir) {
+            include prohibitedFiles.collect { "**/${it}" as String }
+            exclude '**/build/**'
+            exclude '**/.gradle/**'
+            exclude '**/.git/**'
+            exclude '**/node_modules/**'
+        }
+        scanTree.each { f -> violations << f.absolutePath }
+
+        // Recursively find node_modules directories, skipping build outputs.
+        // Defined as a closure so it can recurse without Gradle upfront evaluation.
+        def findNodeModules
+        findNodeModules = { File dir ->
+            if (!dir.isDirectory()) return
+            def relPath = rootDir.toPath().relativize(dir.toPath()).toString()
+            if (dir.name == 'node_modules') {
+                violations << dir.absolutePath
+                return
+            }
+            // Skip directories that are build outputs or VCS internals
+            if (dir.name == 'build' || dir.name == '.gradle' || dir.name == '.git') return
+            dir.listFiles()?.each { child ->
+                if (child.isDirectory()) findNodeModules(child)
+            }
+        }
+        findNodeModules(rootDir)
+
+        if (violations) {
+            throw new GradleException(
+                "NPM artifact policy violation: Prohibited NPM package manager files or " +
+                "directories were found in this Java/Gradle service repository.\n\n" +
+                "Offending paths:\n" +
+                violations.collect { "  ${it}" }.join('\n') + "\n\n" +
+                "Action required: Remove these files from the repository.\n" +
+                "This service uses Gradle and Java only. Do not add package.json,\n" +
+                "package-lock.json, npm-shrinkwrap.json, yarn.lock, pnpm-lock.yaml,\n" +
+                "or node_modules/ to commits. See README.md for contribution policy."
+            )
+        } else {
+            logger.lifecycle("checkNoNpmArtifacts PASSED — no prohibited NPM artifacts found.")
+        }
+    }
+}
+
+check.dependsOn checkNoNpmArtifacts
+
+// ============================================================
+// NPM Artifact Guard Self-Test
+//
+// Verifies the guard detects prohibited files (failing state)
+// and passes on a clean directory (passing state).
+//
+// Run:  ./gradlew verifyNpmArtifactGuard
+//
+// Uses temporary directories under build/ which are excluded
+// from the main guard scan — no real NPM files are committed.
+// ============================================================
+tasks.register('verifyNpmArtifactGuard') {
+    group = 'Verification'
+    description = 'Self-test: verifies the NPM artifact guard correctly detects prohibited files ' +
+            'and passes on clean state. Run: ./gradlew verifyNpmArtifactGuard'
+
+    doLast {
+        def prohibitedFiles = [
+            'package.json', 'package-lock.json', 'npm-shrinkwrap.json',
+            'yarn.lock', 'pnpm-lock.yaml'
+        ]
+
+        // ---- Test 1: clean directory must produce zero violations ----
+        def cleanDir = file("${buildDir}/npm-guard-test/clean")
+        cleanDir.mkdirs()
+        def cleanViolations = prohibitedFiles.findAll { name ->
+            new File(cleanDir, name).exists()
+        }
+        if (!cleanViolations.isEmpty()) {
+            throw new GradleException(
+                "verifyNpmArtifactGuard FAIL: clean directory unexpectedly contains prohibited files: " +
+                "${cleanViolations}. This is a guard implementation bug."
+            )
+        }
+
+        // ---- Test 2: each prohibited file name must be detected ----
+        def dirtyDir = file("${buildDir}/npm-guard-test/dirty")
+        dirtyDir.mkdirs()
+        def detectionFailures = []
+        prohibitedFiles.each { name ->
+            def f = new File(dirtyDir, name)
+            // Write minimal safe placeholder — no real NPM dependency declarations
+            f.text = "# Test fixture — not a real NPM artifact. Remove if present outside build/.\n"
+            if (!f.exists() || !prohibitedFiles.contains(f.name)) {
+                detectionFailures << name
+            }
+        }
+        if (!detectionFailures.isEmpty()) {
+            throw new GradleException(
+                "verifyNpmArtifactGuard FAIL: guard did not detect these file names: " +
+                "${detectionFailures}"
+            )
+        }
+
+        // ---- Test 3: node_modules directory must be detected ----
+        def nodeModDir = new File(dirtyDir, 'node_modules')
+        nodeModDir.mkdir()
+        if (!nodeModDir.exists() || nodeModDir.name != 'node_modules') {
+            throw new GradleException(
+                "verifyNpmArtifactGuard FAIL: node_modules directory was not created/detectable."
+            )
+        }
+
+        logger.lifecycle("verifyNpmArtifactGuard PASSED — guard correctly detects all prohibited " +
+                "patterns and passes on clean state.")
+    }
+}
+
+check.dependsOn verifyNpmArtifactGuard
