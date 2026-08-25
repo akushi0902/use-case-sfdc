@@ -39,10 +39,18 @@ apply plugin: 'io.spring.dependency-management'
 group = 'com.opsera.integrator'
 version = '0.0.1-SNAPSHOT'
 
+// Java 21 toolchain — enforces consistent compilation and test execution across
+// developer workstations, CI workers, and release builds regardless of host JVM.
+// Gradle provisions the JDK automatically if JAVA_HOME does not point to Java 21.
+// Java 25 is a future certification target only — do NOT change this to 25.
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+    // Explicit compatibility settings ensure plugins that inspect these values
+    // (e.g. SonarQube, PMD, Checkstyle) agree with the toolchain baseline.
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 // ============================================================
@@ -154,3 +162,39 @@ tasks.register('checkNoJCenter') {
 
 // Wire hygiene check into the standard check lifecycle
 check.dependsOn checkNoJCenter
+
+// ============================================================
+// Java Toolchain Baseline Verification
+//
+// Run this task to confirm the build is targeting Java 21:
+//   ./gradlew checkJavaToolchain
+//
+// Fails if sourceCompatibility or targetCompatibility deviate
+// from Java 21. Wired into the check lifecycle.
+// ============================================================
+tasks.register('checkJavaToolchain') {
+    group = 'Verification'
+    description = 'Fails the build if Java sourceCompatibility or targetCompatibility ' +
+            'are not set to Java 21. Run: ./gradlew checkJavaToolchain'
+
+    doLast {
+        def expected = JavaVersion.VERSION_21
+        if (project.java.sourceCompatibility != expected) {
+            throw new GradleException(
+                "Java toolchain baseline violation: sourceCompatibility is " +
+                "'${project.java.sourceCompatibility}' but must be '${expected}'.\n" +
+                "Update build.gradle java { sourceCompatibility = JavaVersion.VERSION_21 }."
+            )
+        }
+        if (project.java.targetCompatibility != expected) {
+            throw new GradleException(
+                "Java toolchain baseline violation: targetCompatibility is " +
+                "'${project.java.targetCompatibility}' but must be '${expected}'.\n" +
+                "Update build.gradle java { targetCompatibility = JavaVersion.VERSION_21 }."
+            )
+        }
+        logger.lifecycle("checkJavaToolchain PASSED — sourceCompatibility and targetCompatibility are Java 21.")
+    }
+}
+
+check.dependsOn checkJavaToolchain
