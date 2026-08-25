@@ -1370,3 +1370,35 @@ Fixtures must not contain:
 - Real Salesforce credentials, bearer tokens, or org URLs
 - Real customer identifiers, production pipeline IDs, or deployment request IDs
 - Database connection strings, Kubernetes cluster names, or Git provider tokens
+
+---
+
+## Privacy Runbooks — GDPR / CCPA Operational Procedures
+
+> **AUTHORIZATION REQUIRED:** Executing any privacy request procedure against a production environment requires an approved Data Subject Access Request (DSAR) or erasure order, least-privilege production credentials issued by the platform team, and named approver on record. These documents describe procedures; they do not grant access.
+
+The following runbooks document how to execute, verify, and close GDPR and CCPA privacy requests for data held by this service. All procedures reference implemented service controls (classification, audit, retention, purge, masking, safe logging) and must not be followed without proper authorization.
+
+| Document | Purpose |
+|---|---|
+| [`docs/privacy/privacy-access-runbook.md`](docs/privacy/privacy-access-runbook.md) | Locate and export safe subject-related job, artifact, retention, and audit metadata for GDPR Article 15 / CCPA Right to Know requests |
+| [`docs/privacy/privacy-erasure-runbook.md`](docs/privacy/privacy-erasure-runbook.md) | Eligibility checks, legal hold handling, immutable audit exceptions, purge execution, verification, rollback limitations, and escalation for GDPR Article 17 / CCPA Right to Delete requests |
+| [`docs/privacy/privacy-certification-checklist.md`](docs/privacy/privacy-certification-checklist.md) | GDPR and CCPA obligation mapping to implemented controls: classification, audit, retention, purge, masking, safe logging, and scope authorization |
+| [`docs/privacy/privacy-evidence-template.md`](docs/privacy/privacy-evidence-template.md) | Dry-run and live-execution evidence template: request intake, operator actions, approval checkpoints, purge or retention decisions, verification, and closure |
+
+### Privacy SLOs
+
+| Request type | End-to-end SLO | Governing regulation |
+|---|---|---|
+| Access (Right to Know) | ≤ 30 days from request receipt | GDPR Article 12 / CCPA |
+| Erasure (Right to Delete) | ≤ 30 days from request receipt (GDPR) / ≤ 45 days (CCPA) | GDPR Article 17 / CCPA |
+
+SLO risk escalation path: notify the privacy team lead and engineering manager immediately. Log escalation in the DSAR ticket.
+
+### Privacy runbook security constraints
+
+Privacy runbook documents must not include:
+- Real customer names, email addresses, or personal identifiers
+- Real production pipeline identifiers, correlation IDs, or job IDs
+- Actual operator account names, credentials, or environment-specific values
+- Production database connection strings, org URLs, or artifact store credentials
