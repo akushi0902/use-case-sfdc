@@ -176,6 +176,40 @@ missing_var_test "${DEPLOY_DIR}/test-k8.sh"
 missing_var_test "${DEPLOY_DIR}/prod-k8.sh"
 
 # ---------------------------------------------------------------------------
+# Step 5: Worker manifest policy validation
+# ---------------------------------------------------------------------------
+
+section "Worker manifest policy validation"
+
+VALIDATE_WORKER="${SCRIPT_DIR}/validate-worker-manifests.sh"
+if [ -f "${VALIDATE_WORKER}" ]; then
+    if bash -n "${VALIDATE_WORKER}" 2>&1; then
+        pass "validate-worker-manifests.sh: syntax OK"
+    else
+        fail "validate-worker-manifests.sh: syntax error"
+    fi
+
+    # Run the worker manifest validation as part of deploy script validation
+    if bash "${VALIDATE_WORKER}" 2>&1; then
+        pass "validate-worker-manifests.sh: all manifest policy checks passed"
+    else
+        fail "validate-worker-manifests.sh: one or more manifest policy checks failed"
+    fi
+else
+    fail "validate-worker-manifests.sh: file not found at ${VALIDATE_WORKER}"
+fi
+
+# Verify that deploy scripts include worker manifest validation section
+for script in "${DEPLOY_SCRIPTS[@]}"; do
+    name="$(basename "${script}")"
+    if grep -q 'validate-worker-manifests.sh' "${script}" 2>/dev/null; then
+        pass "${name}: includes worker manifest validation call"
+    else
+        fail "${name}: missing worker manifest validation — add validate-worker-manifests.sh call"
+    fi
+done
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 

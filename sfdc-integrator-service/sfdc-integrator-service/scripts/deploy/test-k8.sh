@@ -106,9 +106,32 @@ run_cmd bash -c "cd '${SERVICE_DIR}' && ./gradlew clean check bootJar --no-daemo
 echo "[deploy:${ENVIRONMENT}] Deploying to namespace: ${NAMESPACE}, image tag: ${IMAGE_TAG}"
 echo "[deploy:${ENVIRONMENT}] Kafka: ${KAFKA_BOOTSTRAP_SERVERS}"
 
+# ---------------------------------------------------------------------------
+# Worker manifest validation
+# ---------------------------------------------------------------------------
+
+echo "[deploy:${ENVIRONMENT}] Validating worker manifests..."
+VALIDATE_WORKER="${SCRIPT_DIR}/../validate-worker-manifests.sh"
+if [ -f "${VALIDATE_WORKER}" ]; then
+    if ! bash "${VALIDATE_WORKER}" 2>&1; then
+        echo "ERROR [deploy:${ENVIRONMENT}]: Worker manifest policy validation failed." >&2
+        echo "  Fix the reported violations before deploying." >&2
+        exit 1
+    fi
+    echo "[deploy:${ENVIRONMENT}] Worker manifest validation passed."
+else
+    echo "WARNING [deploy:${ENVIRONMENT}]: validate-worker-manifests.sh not found — skipping worker manifest validation."
+fi
+
 # Apply Kubernetes manifests
 run_cmd kubectl apply -f k8s/test/ -n "${NAMESPACE}"
 
+# Apply worker RBAC and service account manifests
+run_cmd kubectl apply -f k8s/worker-service-account.yaml -n "${NAMESPACE}"
+run_cmd kubectl apply -f k8s/worker-role.yaml -n "${NAMESPACE}"
+run_cmd kubectl apply -f k8s/worker-role-binding.yaml -n "${NAMESPACE}"
+
+echo "[deploy:${ENVIRONMENT}] Worker manifests applied. Worker jobs use service account: sfdc-worker"
 echo "[deploy:${ENVIRONMENT}] Deployment complete. Verify pod startup with:"
 echo "  kubectl rollout status deployment/sfdc-integrator-service -n ${NAMESPACE}"
 echo "  kubectl logs -l app=sfdc-integrator-service -n ${NAMESPACE} --tail=50"

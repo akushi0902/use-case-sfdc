@@ -1,0 +1,46 @@
+# worker-role.yaml
+#
+# Namespace-scoped RBAC Role for SFDC Integrator worker pods.
+#
+# Design principles:
+#   - Namespace-scoped (Role, not ClusterRole) — no cross-namespace access.
+#   - No wildcard verbs ("*") — only the exact verbs required.
+#   - No cluster-admin or cluster-wide permissions.
+#   - Worker needs to observe its own pod lifecycle and stream logs.
+#     It does NOT need to create, update, or delete pods — Kubernetes
+#     Job controller manages pod lifecycle.
+#
+# Minimum required permissions:
+#   pods:     get, list, watch  — observe own pod status and detect failures
+#   pods/log: get               — stream execution logs for diagnostics
+#
+# Forbidden (must NEVER be granted):
+#   - Wildcard verbs (*) on any resource
+#   - create/delete/patch on pods, services, or deployments
+#   - secrets (get/list/watch) — secrets are mounted via volumes, not API calls
+#   - ClusterRole or cross-namespace RoleBinding
+#   - cluster-admin, cluster-editor, or any aggregate ClusterRole
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sfdc-worker-role
+  namespace: ${WORKER_NAMESPACE}
+  labels:
+    app: sfdc-integrator-service
+    component: worker
+    workload: release-worker
+    managed-by: sfdc-deploy-scripts
+rules:
+  # Observe own pod status — required for worker self-health checks
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  # Stream pod execution logs — required for diagnostic log capture
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # Observe own Job status — required for workers that poll their own Job completion
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch"]

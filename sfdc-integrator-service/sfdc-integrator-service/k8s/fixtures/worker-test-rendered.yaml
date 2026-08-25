@@ -1,0 +1,134 @@
+# worker-test-rendered.yaml
+#
+# Sample rendered worker manifests for the test/staging environment.
+# ALL values are non-functional placeholders only.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sfdc-worker
+  namespace: sfdc-integrator-test
+  labels:
+    app: sfdc-integrator-service
+    component: worker
+    workload: release-worker
+    environment: test
+    managed-by: sfdc-deploy-scripts
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sfdc-worker-role
+  namespace: sfdc-integrator-test
+  labels:
+    app: sfdc-integrator-service
+    component: worker
+    workload: release-worker
+    environment: test
+    managed-by: sfdc-deploy-scripts
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sfdc-worker-role-binding
+  namespace: sfdc-integrator-test
+  labels:
+    app: sfdc-integrator-service
+    component: worker
+    workload: release-worker
+    environment: test
+    managed-by: sfdc-deploy-scripts
+subjects:
+  - kind: ServiceAccount
+    name: sfdc-worker
+    namespace: sfdc-integrator-test
+roleRef:
+  kind: Role
+  name: sfdc-worker-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sfdc-worker-example-test-001
+  namespace: sfdc-integrator-test
+  labels:
+    app: sfdc-integrator-service
+    component: worker
+    workload: release-worker
+    environment: test
+    cost-center: engineering-ops-placeholder
+    managed-by: sfdc-deploy-scripts
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        app: sfdc-integrator-service
+        component: worker
+        workload: release-worker
+        environment: test
+        cost-center: engineering-ops-placeholder
+    spec:
+      serviceAccountName: sfdc-worker
+      automountServiceAccountToken: true
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: sfdc-worker
+          image: registry.test.example.internal/sfdc-worker:0.0.1-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+              ephemeral-storage: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+              ephemeral-storage: "512Mi"
+          env:
+            - name: SFDC_ENV
+              value: "test"
+            - name: WORKER_JOB_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: tmp-workspace
+              mountPath: /tmp
+            - name: worker-logs
+              mountPath: /var/log/sfdc-worker
+      volumes:
+        - name: tmp-workspace
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: worker-logs
+          emptyDir:
+            sizeLimit: 128Mi
