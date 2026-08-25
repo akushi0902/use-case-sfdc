@@ -487,3 +487,122 @@ tasks.register('checkNoChangingDependencies') {
 }
 
 check.dependsOn checkNoChangingDependencies
+
+// ============================================================
+// Dependency Locking
+//
+// Gradle dependency locking records the exact resolved version
+// of every dependency into per-configuration lock files under
+// gradle/dependency-locks/. Lock file changes are visible in
+// code review, making dependency drift an explicit event.
+//
+// Mode: LENIENT — new dependencies resolve but generate a
+// warning. Use STRICT mode in CI gating once lock files have
+// been bootstrapped with ./gradlew dependencies --write-locks.
+//
+// Lock files location: gradle/dependency-locks/<config>.lockfile
+//
+// To regenerate lock files after a dependency change:
+//   ./gradlew dependencies --write-locks
+//
+// To verify the build resolves consistently with locked versions:
+//   ./gradlew dependencies
+//
+// To update a single configuration's lock file:
+//   ./gradlew <config>:dependencies --update-locks <group>:<artifact>
+// ============================================================
+dependencyLocking {
+    lockAllConfigurations()
+    // LENIENT allows the build to succeed if new transitive dependencies appear
+    // without an explicit --write-locks pass. Prevents CI hard failures during
+    // the initial lock file bootstrap period. Promote to STRICT once the lock
+    // files have been fully regenerated against resolved dependency graphs.
+    lockMode = LockMode.LENIENT
+}
+
+// ============================================================
+// Dependency Lock Configuration Verification
+//
+// Verifies that dependency locking is configured and that the
+// lock file directory is present. Fails if locking is disabled
+// or the lock directory is missing.
+//
+// Run:  ./gradlew checkDependencyLockConfiguration
+// ============================================================
+tasks.register('checkDependencyLockConfiguration') {
+    group = 'Verification'
+    description = 'Fails the build if dependency locking is not configured or the lock file ' +
+            'directory is absent. Run: ./gradlew checkDependencyLockConfiguration'
+
+    doLast {
+        def lockDir = new File(projectDir, 'gradle/dependency-locks')
+        if (!lockDir.exists() || !lockDir.isDirectory()) {
+            throw new GradleException(
+                "Dependency locking configuration violation: lock file directory not found at " +
+                "${lockDir.path}.\n\n" +
+                "Remediation:\n" +
+                "  1. Run ./gradlew dependencies --write-locks to generate lock files.\n" +
+                "  2. Commit the generated gradle/dependency-locks/*.lockfile files.\n" +
+                "  See README.md § Dependency Locking for details."
+            )
+        }
+        def lockFiles = lockDir.listFiles()?.findAll { it.name.endsWith('.lockfile') } ?: []
+        if (lockFiles.isEmpty()) {
+            throw new GradleException(
+                "Dependency locking configuration violation: no *.lockfile files found in " +
+                "${lockDir.path}.\n\n" +
+                "Remediation:\n" +
+                "  Run ./gradlew dependencies --write-locks to generate lock files.\n" +
+                "  Commit the generated lock files so dependency drift is visible in code review."
+            )
+        }
+        logger.lifecycle("checkDependencyLockConfiguration PASSED — ${lockFiles.size()} lock file(s) found in gradle/dependency-locks/.")
+    }
+}
+
+check.dependsOn checkDependencyLockConfiguration
+
+// ============================================================
+// Verification Metadata Check
+//
+// Verifies that gradle/verification-metadata.xml exists and
+// contains a <configuration> element. Fails if the file is
+// absent or structurally empty.
+//
+// Run:  ./gradlew checkVerificationMetadata
+//
+// To regenerate verification metadata with real checksums:
+//   ./gradlew --write-verification-metadata sha256 dependencies
+// ============================================================
+tasks.register('checkVerificationMetadata') {
+    group = 'Verification'
+    description = 'Fails the build if gradle/verification-metadata.xml is absent or missing ' +
+            'its configuration element. Run: ./gradlew checkVerificationMetadata'
+
+    doLast {
+        def metadataFile = new File(projectDir, 'gradle/verification-metadata.xml')
+        if (!metadataFile.exists()) {
+            throw new GradleException(
+                "Verification metadata violation: gradle/verification-metadata.xml not found " +
+                "at ${metadataFile.path}.\n\n" +
+                "Remediation:\n" +
+                "  Run ./gradlew --write-verification-metadata sha256 dependencies to generate.\n" +
+                "  Commit the generated file so checksum drift is visible in code review.\n" +
+                "  See README.md § Dependency Verification Metadata for details."
+            )
+        }
+        def content = metadataFile.text
+        if (!content.contains('<configuration>')) {
+            throw new GradleException(
+                "Verification metadata violation: gradle/verification-metadata.xml exists but " +
+                "does not contain a <configuration> element.\n" +
+                "The file may be truncated or manually edited incorrectly.\n\n" +
+                "Remediation:\n" +
+                "  Regenerate with: ./gradlew --write-verification-metadata sha256 dependencies"
+            )
+        }
+        logger.lifecycle("checkVerificationMetadata PASSED — gradle/verification-metadata.xml is present and structurally valid.")
+    }
+}
+
+check.dependsOn checkVerificationMetadata

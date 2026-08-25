@@ -174,7 +174,8 @@ Before building, ensure the following are available:
 
 ```bash
 # Resolve dependencies and run all checks
-# (includes JCenter hygiene, Java toolchain, and NPM artifact guard)
+# (includes JCenter hygiene, Java toolchain, NPM artifact guard,
+#  dependency locking configuration, and verification metadata check)
 ./gradlew check
 
 # Run tests only
@@ -200,6 +201,16 @@ Before building, ensure the following are available:
 
 # Print toolchain diagnostics
 ./gradlew -q javaToolchains
+
+# Regenerate dependency lock files after a version change
+./gradlew dependencies --write-locks
+
+# Generate/update dependency verification checksums
+./gradlew --write-verification-metadata sha256 dependencies
+
+# Verify lock file directory and verification metadata exist
+./gradlew checkDependencyLockConfiguration
+./gradlew checkVerificationMetadata
 ```
 
 ---
@@ -214,8 +225,96 @@ Before building, ensure the following are available:
 | `verifyNpmArtifactGuard` | `check` | Self-test: guard detects prohibited files and passes clean state |
 | `validateDeployScripts` | `check` | Syntax and dry-run validation on all Kubernetes deployment scripts |
 | `checkNoChangingDependencies` | `check` | No `changing = true` or SNAPSHOT coordinates for internal Opsera artifacts |
+| `checkDependencyLockConfiguration` | `check` | Lock file directory and `*.lockfile` files are present |
+| `checkVerificationMetadata` | `check` | `gradle/verification-metadata.xml` exists with a `<configuration>` element |
 
 All tasks in the table above run automatically when you run `./gradlew check` or `./gradlew build`.
+
+---
+
+## Dependency Locking
+
+Gradle dependency locking records the exact resolved version of every direct and transitive dependency into per-configuration lock files committed to source control. When a dependency version changes — intentionally or via a supply-chain substitution — the lock file diff is visible in code review.
+
+### Lock File Location
+
+```
+gradle/dependency-locks/
+  compileClasspath.lockfile
+  runtimeClasspath.lockfile
+  testCompileClasspath.lockfile
+  testRuntimeClasspath.lockfile
+```
+
+### Locking Mode
+
+Dependency locking is currently enabled in **LENIENT mode**. In this mode:
+- New or changed dependencies generate a warning but do not fail the build.
+- Lock file content serves as an authoritative record of resolved versions for code review.
+
+To promote to **STRICT mode** (fail on any deviation from the lock file), change `lockMode = LockMode.LENIENT` to `lockMode = LockMode.STRICT` in `build.gradle` after the lock files have been fully bootstrapped with a real resolution run.
+
+### Regenerating Lock Files
+
+After adding, removing, or bumping a dependency:
+
+```bash
+# Regenerate all configuration lock files
+./gradlew dependencies --write-locks
+
+# Commit the updated lock files alongside the build.gradle change
+git add gradle/dependency-locks/
+git commit -m "Refresh dependency lock files after bumping <dependency>"
+```
+
+### Lock File Format
+
+Each `*.lockfile` lists one resolved coordinate per line:
+
+```
+group:artifact:version=configA,configB,...
+empty=
+```
+
+The `empty=` sentinel at the end is always written by Gradle and must be preserved.
+
+---
+
+## Dependency Verification Metadata
+
+`gradle/verification-metadata.xml` provides checksum-based verification of resolved dependency artifacts. When checksums are populated, Gradle verifies every downloaded JAR against the recorded SHA-256 before allowing compilation. A changed byte (supply-chain substitution or mutable artifact re-publish) fails the build immediately.
+
+### Bootstrap State
+
+The committed file contains structural configuration only (`<configuration>` element with `verify-metadata: true`, `verify-signatures: false`). The `<components>` section must be populated with real checksums before verification is enforced:
+
+```bash
+# Generate SHA-256 checksums for all resolved dependencies
+./gradlew --write-verification-metadata sha256 dependencies
+
+# Commit the updated file
+git add gradle/verification-metadata.xml
+git commit -m "Populate dependency verification checksums"
+```
+
+### Updating Checksums
+
+When a dependency is bumped or added:
+
+1. Bump the version in `build.gradle`.
+2. Run `./gradlew --write-verification-metadata sha256 dependencies`.
+3. Review the diff — only the expected coordinates should change.
+4. Also refresh lock files: `./gradlew dependencies --write-locks`.
+5. Commit `gradle/verification-metadata.xml` and lock files together with the version change.
+
+### Policy
+
+| Setting | Value | Reason |
+|---|---|---|
+| `verify-metadata` | `true` | POM and module metadata verified, not just JARs |
+| `verify-signatures` | `false` | GPG verification deferred; requires keyserver access in CI |
+
+**Never commit real credentials, tokens, or connection details to this file.** It stores only dependency coordinates and checksums.
 
 ---
 
