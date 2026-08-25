@@ -418,6 +418,35 @@ Flyway does not support automatic rollback of applied migrations. To roll back:
 
 ---
 
+## Operational SLOs and Guardrails
+
+Release workflow reliability targets are defined in two committed files:
+
+| File | Purpose |
+|---|---|
+| [`docs/operations/release-workflow-slos.md`](docs/operations/release-workflow-slos.md) | Human-readable SLO policy: SLI catalog, targets, escalation guidance, and implementation status |
+| [`ops/slo/release-workflow-guardrails.yaml`](ops/slo/release-workflow-guardrails.yaml) | Machine-readable thresholds for dashboard panels, alert rules, and rollout gate conditions |
+
+**These files are the single source of truth for SLO thresholds.** Do not retype threshold values in dashboards or alert configurations — import or reference `ops/slo/release-workflow-guardrails.yaml` directly.
+
+Covered workflows: Quick Deploy (`POST /quickdeploy`), Deployment (`POST /deploy`), Validation (`POST /validate`), and Status Tracking (route pending).
+
+Key guardrail thresholds:
+
+| Guardrail | Threshold | Status |
+|---|---|---|
+| p95 API acceptance latency | < 2 000 ms | Active (metrics exporter pending) |
+| p95 status lookup latency | < 1 000 ms | Pending (status route not yet implemented) |
+| Active-job checkpoint freshness | ≤ 60 s staleness | Pending (Kafka checkpoints not yet implemented) |
+| Server-side error rate | < 1% | Active (metrics exporter pending) |
+| Legacy compatibility | ≥ 99.9% | Active (coexistence period) |
+| Production RPO | ≤ 15 min | Pending (PITR backup not yet confirmed) |
+| Production RTO | ≤ 4 hours | Pending (recovery runbook not yet timed) |
+
+Baselines marked _pending_ have not yet been established by production telemetry and must not be assumed. See `docs/operations/release-workflow-slos.md` §6 for the implementation gap table.
+
+---
+
 ## Java 21 Toolchain Troubleshooting
 
 | Symptom | Cause | Resolution |

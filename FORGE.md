@@ -70,3 +70,10 @@
 - **Files:** 25 (+932/-6)
 - **Duration:** 561ss
 - **Approach:** Introduced a governance/classification package with three enums (DataClassification, GovernanceDataCategory, RetentionCategoryHint), an immutable ClassificationContext value object, ClassificationProperties @ConfigurationProperties binding, and ClassificationPolicyResolver @Service that fails closed to CONFIDENTIAL+STANDARD for null, unknown, or error cases. GovernanceConfig enables the properties. application.yaml gained a sfdc.governance.classification block mapping all six categories to their classification tiers and retention hints. All four controller entry points (JobExecution, SfdcIntegrator, DataMigration, PostRefresh) resolve classification at request entry and log only operation name and classification tier. Existing characterization tests for JobExecutionController and SfdcIntegratorController received @MockBean ClassificationPolicyResolver. New @WebMvcTest suites for DataMigrationController and PostRefreshTaskController verify 200/SUCCESS, service delegation, classification resolver invocation with correct arguments, and 400 on malformed JSON. ClassificationPolicyResolverTest covers all six categories, fail-closed on null/unconfigured, safe toString.
+
+## WO-111: User Story: WO-111 - Define Release Workflow SLO Guardrails
+- **Status:** completed
+- **Commit:** `73d5cfa`
+- **Files:** 3 (+501/-0)
+- **Duration:** 255ss
+- **Approach:** Created a human-readable SLO policy document and a machine-readable guardrail YAML. The SLO doc defines seven SLIs with exact measurement boundaries, nine SLO targets with thresholds and pending-measurement baselines, and five escalation/burn-rate guidance sections covering all required failure modes. The guardrail YAML provides stable identifier-keyed entries with numeric thresholds, units, severity, owner, metric hints, and rollout gate conditions. README.md gained an Operational SLOs and Guardrails section linking both files and summarising the active thresholds. No application code, test logic, API contracts, or Flyway migrations were changed.
