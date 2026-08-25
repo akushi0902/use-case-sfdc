@@ -1,6 +1,11 @@
 package com.opsera.integrator.sfdc.controller;
 
+import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
+import com.opsera.integrator.sfdc.governance.audit.AuditOperation;
+import com.opsera.integrator.sfdc.governance.audit.AuditResourceType;
+import com.opsera.integrator.sfdc.governance.audit.SafeAuditMetadata;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
+import com.opsera.integrator.sfdc.governance.classification.DataClassification;
 import com.opsera.integrator.sfdc.governance.classification.GovernanceDataCategory;
 import com.opsera.integrator.sfdc.logging.SafeLogEvent;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
@@ -23,13 +28,9 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>POST /quickdeploy/stop — cancel a running quick deploy job</li>
  * </ul>
  *
- * <p>Both endpoints return a plain {@code "SUCCESS"} acknowledgement string on HTTP 200
- * after delegating to the {@link QuickDeployService}. Long-running Salesforce execution
- * proceeds asynchronously after acknowledgement.
- *
- * <p>Input validation on {@code startQuickDeploy} is enforced via Jakarta Bean Validation
- * ({@code @Valid}); invalid requests throw {@code MethodArgumentNotValidException} which
- * is mapped to a structured 400 response by {@code SfdcExceptionHandler}.
+ * <p>Both endpoints emit an immutable audit event via {@link AuditEventWriter}
+ * before returning. Audit write failures propagate as errors — governed mutations
+ * must not proceed without an audit record.
  *
  * <p>Operational logging uses {@link SafeStructuredLogger} — raw request bodies and DTO
  * toString output are never emitted to logs.
@@ -43,21 +44,23 @@ public class JobExecutionController {
     private final QuickDeployService quickDeployService;
     private final ClassificationPolicyResolver classificationResolver;
     private final SafeStructuredLogger safeLogger;
+    private final AuditEventWriter auditWriter;
 
     public JobExecutionController(QuickDeployService quickDeployService,
                                    ClassificationPolicyResolver classificationResolver,
-                                   SafeStructuredLogger safeLogger) {
+                                   SafeStructuredLogger safeLogger,
+                                   AuditEventWriter auditWriter) {
         this.quickDeployService = quickDeployService;
         this.classificationResolver = classificationResolver;
         this.safeLogger = safeLogger;
+        this.auditWriter = auditWriter;
     }
 
     /**
      * Starts a quick deploy job.
      *
-     * <p>Jakarta Bean Validation rejects requests where {@code deploymentRequestId}
-     * is absent or blank before this method is invoked.
-     * Normalizes a null {@code fallbackTaskId} to an empty string before delegation.
+     * <p>Emits a {@link AuditOperation#JOB_SUBMITTED} audit event with safe metadata
+     * (pipelineId, stepId only). Audit write failures propagate to the exception handler.
      */
     @PostMapping
     public ResponseEntity<String> startQuickDeploy(@Valid @RequestBody QuickDeployRequest request) {
@@ -77,11 +80,28 @@ public class JobExecutionController {
         }
 
         quickDeployService.start(request);
+
+        auditWriter.write(
+                request.getPipelineId(),
+                AuditResourceType.QUICK_DEPLOY_JOB,
+                request.getPipelineId() != null ? request.getPipelineId() : "unknown",
+                AuditOperation.JOB_SUBMITTED,
+                DataClassification.CONFIDENTIAL,
+                SafeAuditMetadata.builder()
+                        .field("pipelineId", request.getPipelineId())
+                        .field("stepId", request.getStepId())
+                        .field("outcome", "SUBMITTED")
+                        .toJson(),
+                "JobExecutionController.startQuickDeploy");
+
         return ResponseEntity.ok(SUCCESS);
     }
 
     /**
      * Cancels a running quick deploy job.
+     *
+     * <p>Emits a {@link AuditOperation#JOB_CANCELLED} audit event with safe metadata
+     * (pipelineId only). Audit write failures propagate to the exception handler.
      */
     @PostMapping("/stop")
     public ResponseEntity<String> stopQuickDeploy(@RequestBody QuickDeployStopRequest request) {
@@ -95,6 +115,19 @@ public class JobExecutionController {
                 .build());
 
         quickDeployService.stop(request);
+
+        auditWriter.write(
+                request.getPipelineId(),
+                AuditResourceType.QUICK_DEPLOY_JOB,
+                request.getPipelineId() != null ? request.getPipelineId() : "unknown",
+                AuditOperation.JOB_CANCELLED,
+                DataClassification.CONFIDENTIAL,
+                SafeAuditMetadata.builder()
+                        .field("pipelineId", request.getPipelineId())
+                        .field("outcome", "CANCELLED")
+                        .toJson(),
+                "JobExecutionController.stopQuickDeploy");
+
         return ResponseEntity.ok(SUCCESS);
     }
 }

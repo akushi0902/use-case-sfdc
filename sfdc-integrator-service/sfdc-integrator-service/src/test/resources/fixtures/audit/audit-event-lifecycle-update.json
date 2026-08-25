@@ -1,0 +1,14 @@
+{
+  "_comment": "Fixture: audit event for a job lifecycle state transition (e.g. ACCEPTED → RUNNING).",
+  "eventId": "audit-fixture-lifecycle-003",
+  "correlationId": "cid-fixture-audit-003",
+  "actorType": "SYSTEM",
+  "actorRef": "pipeline-fixture-audit-003",
+  "resourceType": "LIFECYCLE_JOB",
+  "resourceRef": "pipeline-fixture-audit-003",
+  "operation": "JOB_LIFECYCLE_TRANSITION",
+  "classification": "CONFIDENTIAL",
+  "safeMetadata": "{\"operationType\":\"QUICK_DEPLOY\",\"outcome\":\"RUNNING\"}",
+  "eventTimestamp": "2026-01-15T10:10:00Z",
+  "requestSource": "LifecycleStateTransitionService.transition"
+}

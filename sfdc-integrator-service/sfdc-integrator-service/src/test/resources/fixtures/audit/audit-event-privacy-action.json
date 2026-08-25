@@ -1,0 +1,14 @@
+{
+  "_comment": "Fixture: audit event for a privacy action (GDPR/CCPA data subject request). Requires RESTRICTED classification and compliance sign-off.",
+  "eventId": "audit-fixture-privacy-005",
+  "correlationId": "cid-fixture-audit-005",
+  "actorType": "OPERATOR",
+  "actorRef": "privacy-service-account-fixture",
+  "resourceType": "LIFECYCLE_JOB",
+  "resourceRef": "pipeline-fixture-privacy-005",
+  "operation": "PRIVACY_ACTION",
+  "classification": "CONFIDENTIAL",
+  "safeMetadata": "{\"operationType\":\"PRIVACY_ERASURE\",\"outcome\":\"INITIATED\"}",
+  "eventTimestamp": "2026-01-15T12:00:00Z",
+  "requestSource": "PrivacyComplianceService.processDataSubjectRequest"
+}

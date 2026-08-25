@@ -24,6 +24,12 @@ spring:
     out-of-order: false
 
 sfdc:
+  audit:
+    # Set to false only for local development without a database. Must be true in all
+    # CI and production environments — governed mutations fail closed when audit is disabled
+    # and an audit event cannot be written.
+    enabled: true
+
   v2:
     release:
       routes:

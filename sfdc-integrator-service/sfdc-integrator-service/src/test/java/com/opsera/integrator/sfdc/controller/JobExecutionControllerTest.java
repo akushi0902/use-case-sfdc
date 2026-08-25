@@ -2,6 +2,7 @@ package com.opsera.integrator.sfdc.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
+import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
@@ -51,6 +52,9 @@ class JobExecutionControllerTest {
 
     @MockBean
     private SafeStructuredLogger safeStructuredLogger;
+
+    @MockBean
+    private AuditEventWriter auditEventWriter;
 
     // ---- LEGACY-001: POST /quickdeploy — start ----
 

@@ -1,0 +1,14 @@
+{
+  "_comment": "Fixture: audit event for a quick deploy job cancellation.",
+  "eventId": "audit-fixture-cancel-002",
+  "correlationId": "cid-fixture-audit-002",
+  "actorType": "APPLICATION",
+  "actorRef": "pipeline-fixture-audit-002",
+  "resourceType": "QUICK_DEPLOY_JOB",
+  "resourceRef": "pipeline-fixture-audit-002",
+  "operation": "JOB_CANCELLED",
+  "classification": "CONFIDENTIAL",
+  "safeMetadata": "{\"pipelineId\":\"pipeline-fixture-audit-002\",\"outcome\":\"CANCELLED\"}",
+  "eventTimestamp": "2026-01-15T10:05:00Z",
+  "requestSource": "JobExecutionController.stopQuickDeploy"
+}

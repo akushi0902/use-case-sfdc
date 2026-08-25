@@ -1,0 +1,14 @@
+{
+  "_comment": "Fixture: audit event for a data purge action on expired lifecycle records. Requires CONFIDENTIAL classification and break-glass authorization.",
+  "eventId": "audit-fixture-purge-004",
+  "correlationId": "cid-fixture-audit-004",
+  "actorType": "OPERATOR",
+  "actorRef": "purge-service-account-fixture",
+  "resourceType": "LIFECYCLE_JOB",
+  "resourceRef": "pipeline-fixture-purge-004",
+  "operation": "PURGE_ACTION",
+  "classification": "CONFIDENTIAL",
+  "safeMetadata": "{\"operationType\":\"PURGE\",\"outcome\":\"PURGED\"}",
+  "eventTimestamp": "2026-01-15T11:00:00Z",
+  "requestSource": "RetentionPurgeService.purgeExpired"
+}
