@@ -66,6 +66,18 @@ public interface JobRepository {
     void saveWorkerAttempt(WorkerAttempt attempt);
 
     /**
+     * Erases sensitive fields in the job record as part of a GDPR/CCPA purge action.
+     *
+     * <p>The job row is NOT deleted (FK constraints from retention metadata prevent it).
+     * Instead, all identifiable fields are nulled or replaced with the tombstone marker
+     * {@code "PURGED"}. Child records (checkpoints, diagnostics, worker attempts) ARE
+     * physically deleted. This constitutes documented cryptographic erasure semantics.
+     *
+     * @param jobId the job identifier to erase
+     */
+    void eraseJobData(String jobId);
+
+    /**
      * Returns active jobs (ACCEPTED, DISPATCHING, or RUNNING) whose last state update
      * was before {@code staleBefore}, ordered by {@code updated_at} ascending.
      *

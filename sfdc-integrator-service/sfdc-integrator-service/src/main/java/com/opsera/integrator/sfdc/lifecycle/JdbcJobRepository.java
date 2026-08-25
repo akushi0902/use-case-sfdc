@@ -130,6 +130,25 @@ public class JdbcJobRepository implements JobRepository {
     }
 
     @Override
+    public void eraseJobData(String jobId) {
+        try {
+            // Delete child records first (FK constraint order matters)
+            jdbc.update("DELETE FROM job_checkpoints WHERE job_id = ?", jobId);
+            jdbc.update("DELETE FROM job_diagnostics WHERE job_id = ?", jobId);
+            jdbc.update("DELETE FROM worker_attempts WHERE job_id = ?", jobId);
+            // Erase identifiable fields in-place; job row kept as tombstone for FK integrity
+            jdbc.update(
+                "UPDATE jobs SET correlation_id = 'PURGED', customer_id_hash = NULL, " +
+                "sfdc_tool_id = NULL, pipeline_id = NULL, step_id = NULL, " +
+                "current_state = 'PURGED', updated_at = CURRENT_TIMESTAMP " +
+                "WHERE job_id = ?", jobId);
+        } catch (Exception ex) {
+            throw new LifecyclePersistenceException(
+                "Failed to erase job data: jobId=" + jobId, ex);
+        }
+    }
+
+    @Override
     public List<JobRecord> findStaleActiveJobs(Instant staleBefore, int maxResults) {
         Timestamp threshold = Timestamp.from(staleBefore);
         return jdbc.query(

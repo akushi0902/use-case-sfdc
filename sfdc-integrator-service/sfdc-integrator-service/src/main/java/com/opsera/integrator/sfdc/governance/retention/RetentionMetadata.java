@@ -34,6 +34,8 @@ public class RetentionMetadata {
     private PurgeEligibilityStatus purgeEligibilityStatus;
     private Instant createdAt;
     private Instant updatedAt;
+    /** Set when data has been erased; null means not yet purged. */
+    private Instant purgedAt;
 
     public RetentionMetadata() {}
 
@@ -69,6 +71,9 @@ public class RetentionMetadata {
 
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+
+    public Instant getPurgedAt() { return purgedAt; }
+    public void setPurgedAt(Instant purgedAt) { this.purgedAt = purgedAt; }
 
     @Override
     public String toString() {

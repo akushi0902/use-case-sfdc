@@ -42,7 +42,17 @@ public final class SafeAuditMetadata {
             "fromState",
             "toState",
             "checkpointCode",
-            "retentionExpiry"
+            "retentionExpiry",
+            // Purge run audit keys
+            "runId",
+            "mode",
+            "batchNumber",
+            "selectedCount",
+            "purgedCount",
+            "skippedCount",
+            "failedCount",
+            "durationMs",
+            "batchSize"
     );
 
     private SafeAuditMetadata() {}

@@ -65,6 +65,27 @@ public class JdbcRetentionMetadataRepository implements RetentionMetadataReposit
     }
 
     @Override
+    public List<RetentionMetadata> findPurgeCandidates(Instant now, int maxResults) {
+        return jdbc.query(
+            "SELECT * FROM job_retention_metadata " +
+            "WHERE purge_eligible_at <= ? " +
+            "  AND purge_eligibility_status = 'ELIGIBLE' " +
+            "  AND legal_hold = FALSE " +
+            "  AND purged_at IS NULL " +
+            "ORDER BY purge_eligible_at ASC " +
+            "LIMIT ?",
+            RETENTION_ROW_MAPPER, toTimestamp(now), maxResults);
+    }
+
+    @Override
+    public int markPurged(String jobRef, Instant purgedAt) {
+        return jdbc.update(
+            "UPDATE job_retention_metadata SET purged_at = ?, updated_at = CURRENT_TIMESTAMP " +
+            "WHERE job_id = ?",
+            toTimestamp(purgedAt), jobRef);
+    }
+
+    @Override
     public void updateLegalHold(String jobRef, boolean legalHold, PurgeEligibilityStatus newStatus) {
         int updated = jdbc.update(
             "UPDATE job_retention_metadata SET legal_hold = ?, purge_eligibility_status = ?, " +
@@ -109,6 +130,7 @@ public class JdbcRetentionMetadataRepository implements RetentionMetadataReposit
         }
         m.setCreatedAt(toInstant(rs.getTimestamp("created_at")));
         m.setUpdatedAt(toInstant(rs.getTimestamp("updated_at")));
+        m.setPurgedAt(toInstant(rs.getTimestamp("purged_at")));
         return m;
     };
 

@@ -350,3 +350,10 @@
 - **Files:** 11 (+708/-0)
 - **Duration:** 505ss
 - **Approach:** Added POST /api/v2/sfdc/jobs/{jobId}/cancel as a new ReleaseJobCancellationController (separate from ReleaseJobController since the base path differs). State-machine logic: validate jobId format → 400, job not found → 404, already CANCELLED → idempotent 202, other terminal state → JobNotCancellableException → 409, active state → lifecycleService.markCancelled() → 202. CancellationRequest (optional body, safeReason + clientCorrelationId) and CancellationAcknowledgement DTOs created. JobNotCancellableException added; SfdcExceptionHandler extended with @ExceptionHandler for it returning HTTP 409 with JOB_NOT_CANCELLABLE errorCode. Legacy /quickdeploy/stop route untouched.
+
+## WO-150: User Story: WO-150 - Enforce Automated Retention Purge
+- **Status:** completed
+- **Commit:** `1707f3d`
+- **Files:** 21 (+1118/-6)
+- **Duration:** 670ss
+- **Approach:** Built the retention purge process as a service/scheduler pair following the existing governance pattern. RetentionPurgeService is invokable directly (injectable Clock for testability) and wrapped by RetentionPurgeScheduler. Three modes: DISABLED (no-op), DRY_RUN (select+count, no mutation), ENFORCE (select + cryptographic erasure). Candidate selection queries job_retention_metadata for records where purge_eligible_at<=now, purge_eligibility_status=ELIGIBLE, legal_hold=false, purged_at IS NULL. Legal hold is double-checked per-record in ENFORCE mode (fail-closed). Erasure: deletes child records (checkpoints, diagnostics, worker_attempts) then NULLs sensitive fields in jobs row in-place (FK integrity maintained, tombstone pattern). Three audit events emitted per run (run_start, batch_result, run_complete) via existing AuditEventWriter. AtomicBoolean application-level lock prevents concurrent JVM runs. Configuration fully in application.yaml with enabled=false + mode=DISABLED safe defaults.

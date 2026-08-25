@@ -24,5 +24,8 @@ public enum AuditResourceType {
     POST_REFRESH_TASK,
 
     /** A retention metadata record for a job or artifact. */
-    RETENTION_RECORD
+    RETENTION_RECORD,
+
+    /** An automated retention purge run covering one or more governed records. */
+    PURGE_RUN
 }

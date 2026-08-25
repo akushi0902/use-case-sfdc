@@ -1,0 +1,11 @@
+{
+  "_comment": "Retention metadata for a job whose retention window has expired and is ELIGIBLE for purge",
+  "jobRef": "job-purge-eligible-001",
+  "retentionCategory": "STANDARD",
+  "classification": "CONFIDENTIAL",
+  "retentionStart": "2023-01-01T00:00:00Z",
+  "retentionExpiration": "2024-01-01T00:00:00Z",
+  "legalHold": false,
+  "purgeEligibilityStatus": "ELIGIBLE",
+  "purgedAt": null
+}

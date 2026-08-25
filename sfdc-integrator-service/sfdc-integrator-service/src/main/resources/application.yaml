@@ -137,6 +137,26 @@ sfdc:
         EXTENDED: 2555
         AUDIT_MANDATED: 3650
 
+      purge:
+        # Master kill switch for automated retention purge.
+        # Must be explicitly set to true by environment owners before purge runs.
+        # Never enable in application.yaml — override per environment via ConfigMap.
+        enabled: false
+        # Purge operating mode: DISABLED | DRY_RUN | ENFORCE
+        # DISABLED: no queries or mutations; DRY_RUN: select but do not erase;
+        # ENFORCE: physically erase eligible governed records.
+        # Safe default: DISABLED — environment owners must promote to DRY_RUN first.
+        mode: DISABLED
+        # Spring cron expression for the scheduled purge run (6-field: sec min hr dom mon dow).
+        # Default: 2 AM UTC daily. Override per environment via ConfigMap.
+        cron: "0 0 2 * * *"
+        # Maximum records to process per purge run. Bounds blast radius.
+        # Increase only after dry-run validation confirms candidate selection is correct.
+        batch-size: 100
+        # Maximum wall-clock seconds for a single purge run before it is aborted.
+        # Prevents long-running purge from impacting API response time.
+        max-runtime-seconds: 300
+
 springdoc:
   # Documentation endpoint: GET /api-docs returns the generated OpenAPI JSON.
   # NOTE: /api-docs is the documentation endpoint — it is NOT the business v2 route
