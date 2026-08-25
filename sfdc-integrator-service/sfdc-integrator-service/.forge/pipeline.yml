@@ -1,0 +1,473 @@
+# Forge Shipping Pipeline — SFDC Integrator Service
+#
+# This file defines the repository-owned release pipeline for the sfdc-integrator-service.
+# It is the authoritative gating specification: no artifact is promoted or deployed unless
+# every required gate in this file passes.
+#
+# Forge credentials, registry tokens, signing key references, Kubernetes kubeconfigs,
+# and environment-specific secrets are NEVER stored here. They are injected at runtime
+# from the managed Forge secret store.
+#
+# Runbook: see README.md § Forge Shipping Release Pipeline
+# SLO guardrails: ops/slo/release-workflow-guardrails.yaml
+# CODEOWNERS: .github/CODEOWNERS
+#
+# Stage order (each stage blocks the next on failure):
+#   build → scan → gate → package → provenance → push → deploy-dev → smoke-test
+#   → gate-staging → deploy-test → smoke-test-staging → gate-prod → deploy-prod
+#
+# To dry-run locally (requires Forge CLI):
+#   forge pipeline run --dry-run --file .forge/pipeline.yml
+
+version: "1"
+service: sfdc-integrator-service
+java_version: "21"
+
+# ---------------------------------------------------------------------------
+# Environment references
+# Credentials and cluster access are NOT stored here — they are resolved
+# from the Forge managed secret store at runtime using the identifiers below.
+# ---------------------------------------------------------------------------
+environments:
+  dev:
+    secret_ref: forge-secrets/sfdc-integrator-dev
+    deploy_script: scripts/deploy/dev-k8.sh
+    namespace: sfdc-integrator-dev
+  test:
+    secret_ref: forge-secrets/sfdc-integrator-test
+    deploy_script: scripts/deploy/test-k8.sh
+    namespace: sfdc-integrator-test
+  prod:
+    secret_ref: forge-secrets/sfdc-integrator-prod
+    deploy_script: scripts/deploy/prod-k8.sh
+    namespace: sfdc-integrator-prod
+    requires_approval: true
+    approval_owners:
+      - "@opsera/release-approvers"
+      - "@opsera/security-review"
+
+# ---------------------------------------------------------------------------
+# Stage: build
+# Compiles, tests, and packages the service JAR.
+# Fails the pipeline if: compilation fails, unit tests fail, check fails,
+# dependency lock configuration is missing, or verification metadata is absent.
+# ---------------------------------------------------------------------------
+stages:
+  - id: build
+    name: Build and Test
+    type: gradle
+    on_failure: block_all
+    steps:
+      - name: Run full check and package
+        command: "./gradlew clean check bootJar --no-daemon --stacktrace"
+        env:
+          # Credentials injected from Forge secret store — never hardcoded.
+          OPSERA_REPO_URL: "${{ forge.secrets.OPSERA_REPO_URL }}"
+          OPSERA_REPO_USER: "${{ forge.secrets.OPSERA_REPO_USER }}"
+          OPSERA_REPO_TOKEN: "${{ forge.secrets.OPSERA_REPO_TOKEN }}"
+        includes:
+          - dependency_locking: true       # checkDependencyLockConfiguration runs via check
+          - dependency_verification: true  # checkVerificationMetadata runs via check
+          - unit_tests: true               # ./gradlew test runs via check
+          - npm_artifact_guard: true       # checkNoNpmArtifacts runs via check
+          - jcenter_guard: true            # checkNoJCenter runs via check
+          - java_toolchain_guard: true     # checkJavaToolchain runs via check
+        artifact:
+          path: "build/libs/sfdc-integrator-service-*.jar"
+          type: jar
+          immutable: true
+
+  # ---------------------------------------------------------------------------
+  # Stage: scan
+  # Runs secret detection, static analysis, software composition analysis,
+  # and SBOM generation before any artifact is packaged or pushed.
+  # Fails the pipeline if: critical or high secret findings, dependency
+  # verification failures, or SAST critical findings are detected.
+  # ---------------------------------------------------------------------------
+  - id: scan
+    name: Security and Compliance Scan
+    type: scan
+    depends_on: [build]
+    on_failure: block_all
+    steps:
+      - name: Secret detection
+        tool: gitleaks
+        args: ["--source=.", "--exit-code=1", "--redact"]
+        fail_on:
+          severity: ["CRITICAL", "HIGH"]
+        suppression_policy:
+          allow_list_file: ".forge/scan-suppressions.yml"
+          require_fields: [expiry, owner, justification]
+
+      - name: Static analysis (SAST)
+        tool: semgrep
+        args: ["--config=auto", "--severity=ERROR", "--json", "--output=reports/sast-results.json"]
+        fail_on:
+          severity: ["CRITICAL", "HIGH"]
+        suppression_policy:
+          allow_list_file: ".forge/scan-suppressions.yml"
+          require_fields: [expiry, owner, justification]
+
+      - name: Software composition analysis (SCA)
+        tool: dependency_check
+        args: ["--project=sfdc-integrator-service", "--format=JSON", "--out=reports/dependency-check-report.json", "--failOnCVSS=7"]
+        fail_on:
+          cvss_score: 7.0
+          vulnerability_severity: ["CRITICAL", "HIGH"]
+        suppression_policy:
+          allow_list_file: ".forge/scan-suppressions.yml"
+          require_fields: [expiry, owner, justification]
+
+      - name: SBOM generation
+        tool: cyclonedx
+        args: ["--project=sfdc-integrator-service", "--output=reports/sbom.json", "--format=json"]
+        required: true
+        artifact:
+          path: "reports/sbom.json"
+          type: sbom
+          attach_to_release: true
+
+      - name: NPM artifact guard
+        command: "./gradlew checkNoNpmArtifacts --no-daemon"
+        fail_on_nonzero: true
+
+  # ---------------------------------------------------------------------------
+  # Stage: image-scan
+  # Runs container image vulnerability scanning when a container image is
+  # produced. Gated on CRITICAL and HIGH CVE findings. If no Dockerfile or
+  # image build definition is present, this stage is skipped with a warning.
+  # ---------------------------------------------------------------------------
+  - id: image-scan
+    name: Container Image Vulnerability Scan
+    type: scan
+    depends_on: [scan]
+    on_failure: block_all
+    condition: "file_exists('Dockerfile') || file_exists('k8s/Dockerfile')"
+    skip_reason: "No Dockerfile found — image scan deferred until container build definition is committed"
+    steps:
+      - name: Build container image for scanning (no push)
+        command: "docker build -t sfdc-integrator-service:scan-only ."
+        on_failure: block_stage
+
+      - name: Image vulnerability scan
+        tool: trivy
+        args: ["image", "--exit-code=1", "--severity=CRITICAL,HIGH", "--format=json", "--output=reports/image-scan.json", "sfdc-integrator-service:scan-only"]
+        fail_on:
+          severity: ["CRITICAL", "HIGH"]
+        suppression_policy:
+          allow_list_file: ".forge/scan-suppressions.yml"
+          require_fields: [expiry, owner, justification]
+        artifact:
+          path: "reports/image-scan.json"
+          type: scan_report
+          attach_to_release: true
+
+  # ---------------------------------------------------------------------------
+  # Stage: gate
+  # Promotion gate — blocks artifact push and deployment if any of the
+  # following are true:
+  #   - Critical or high secret findings present
+  #   - Dependency verification failures present
+  #   - SAST critical findings present
+  #   - SCA CVSS >= 7.0 findings not suppressed
+  #   - Image scan CRITICAL or HIGH findings not suppressed
+  #   - Prohibited NPM artifacts present
+  #   - SBOM missing or unsigned
+  # ---------------------------------------------------------------------------
+  - id: gate
+    name: Release Promotion Gate
+    type: gate
+    depends_on: [scan, image-scan]
+    on_failure: block_all
+    checks:
+      - id: gate-no-critical-secrets
+        description: "No critical or high secret findings from gitleaks"
+        source: scan.secret_detection
+        fail_if: "findings.severity in ['CRITICAL', 'HIGH'] and not suppressed"
+
+      - id: gate-dependency-verification
+        description: "Dependency verification metadata present and passing"
+        source: build.dependency_verification
+        fail_if: "status != 'PASSED'"
+
+      - id: gate-no-critical-sast
+        description: "No critical SAST findings from semgrep"
+        source: scan.static_analysis
+        fail_if: "findings.severity == 'CRITICAL' and not suppressed"
+
+      - id: gate-sca-cvss
+        description: "No unmitigated SCA findings with CVSS >= 7.0"
+        source: scan.software_composition_analysis
+        fail_if: "cvss_score >= 7.0 and not suppressed"
+
+      - id: gate-no-npm-artifacts
+        description: "No prohibited NPM artifacts in source tree"
+        source: scan.npm_artifact_guard
+        fail_if: "status != 'PASSED'"
+
+      - id: gate-sbom-present
+        description: "SBOM artifact generated and attached to release"
+        source: scan.sbom_generation
+        fail_if: "artifact_path is null"
+
+      - id: gate-image-scan
+        description: "No unmitigated CRITICAL or HIGH container image vulnerabilities"
+        source: image-scan.image_vulnerability_scan
+        fail_if: "findings.severity in ['CRITICAL', 'HIGH'] and not suppressed"
+        skip_if_stage_skipped: true
+
+  # ---------------------------------------------------------------------------
+  # Stage: provenance
+  # Signs the build artifact and generates signed SLSA-level provenance.
+  # Fails the pipeline if artifact signing fails or provenance cannot be
+  # generated. The signed provenance is attached to the release record.
+  # ---------------------------------------------------------------------------
+  - id: provenance
+    name: Artifact Signing and Provenance
+    type: provenance
+    depends_on: [gate]
+    on_failure: block_all
+    steps:
+      - name: Sign JAR artifact
+        tool: cosign
+        args: ["sign-blob", "--key=${{ forge.secrets.SIGNING_KEY_REF }}", "build/libs/sfdc-integrator-service-*.jar"]
+        required: true
+        artifact:
+          path: "build/libs/sfdc-integrator-service-*.jar.sig"
+          type: signature
+          attach_to_release: true
+
+      - name: Generate SLSA provenance
+        tool: slsa-generator
+        args:
+          - "--artifact-path=build/libs/sfdc-integrator-service-*.jar"
+          - "--output=reports/provenance.json"
+          - "--source-uri=${{ forge.env.GIT_REMOTE_URL }}"
+          - "--source-digest=${{ forge.env.GIT_COMMIT_SHA }}"
+        required: true
+        artifact:
+          path: "reports/provenance.json"
+          type: provenance
+          attach_to_release: true
+
+      - name: Validate provenance completeness
+        command: "./gradlew validateProvenance --no-daemon"
+        env:
+          PROVENANCE_FILE: "reports/provenance.json"
+        fail_on_nonzero: true
+
+  # ---------------------------------------------------------------------------
+  # Stage: push
+  # Pushes the signed JAR artifact to the immutable release registry.
+  # The 'latest' tag is NEVER pushed to non-dev registries.
+  # ---------------------------------------------------------------------------
+  - id: push
+    name: Push Artifact to Registry
+    type: registry_push
+    depends_on: [provenance]
+    on_failure: block_all
+    steps:
+      - name: Push JAR to internal release registry
+        artifact: "build/libs/sfdc-integrator-service-*.jar"
+        registry: "${{ forge.secrets.RELEASE_REGISTRY_URL }}"
+        tag: "${{ forge.env.RELEASE_TAG }}"
+        tag_policy:
+          reject_latest_for_envs: [test, prod]
+          require_immutable_tag: true
+        credentials_ref: forge-secrets/release-registry
+
+  # ---------------------------------------------------------------------------
+  # Stage: deploy-dev
+  # Deploys to the development environment. Uses IMAGE_TAG from the push stage.
+  # 'latest' is acceptable for dev deployments only.
+  # ---------------------------------------------------------------------------
+  - id: deploy-dev
+    name: Deploy to Dev
+    type: deploy
+    depends_on: [push]
+    on_failure: notify_and_continue
+    environment: dev
+    steps:
+      - name: Run dev deployment script
+        command: "IMAGE_TAG=${{ forge.env.RELEASE_TAG }} ./scripts/deploy/dev-k8.sh"
+        env:
+          KUBECONFIG: "${{ forge.secrets.DEV_KUBECONFIG }}"
+          DB_URL: "${{ forge.secrets.DEV_DB_URL }}"
+          DB_USER: "${{ forge.secrets.DEV_DB_USER }}"
+          DB_PASSWORD: "${{ forge.secrets.DEV_DB_PASSWORD }}"
+          KAFKA_BOOTSTRAP_SERVERS: "${{ forge.secrets.DEV_KAFKA_BOOTSTRAP_SERVERS }}"
+
+  # ---------------------------------------------------------------------------
+  # Stage: smoke-test
+  # Runs a non-production smoke test against the dev deployment using
+  # committed test fixtures. Does NOT contact Salesforce, production
+  # Kafka, Hazelcast, or any production data store.
+  # ---------------------------------------------------------------------------
+  - id: smoke-test
+    name: Dev Smoke Test
+    type: test
+    depends_on: [deploy-dev]
+    on_failure: block_promotion
+    steps:
+      - name: Run Spring Boot smoke test profile
+        command: "./gradlew test -Dspring.profiles.active=test,smoke --no-daemon"
+        env:
+          OPSERA_REPO_URL: "${{ forge.secrets.OPSERA_REPO_URL }}"
+          OPSERA_REPO_USER: "${{ forge.secrets.OPSERA_REPO_USER }}"
+          OPSERA_REPO_TOKEN: "${{ forge.secrets.OPSERA_REPO_TOKEN }}"
+        notes: >
+          Smoke tests use committed fixtures in src/test/resources/fixtures/ and
+          application-test.properties. No live Salesforce, Kafka, Hazelcast,
+          or Kubernetes API access is required.
+
+  # ---------------------------------------------------------------------------
+  # Stage: gate-staging
+  # Second promotion gate before test/staging deployment.
+  # Requires smoke tests to pass and dev deployment to have completed.
+  # ---------------------------------------------------------------------------
+  - id: gate-staging
+    name: Staging Promotion Gate
+    type: gate
+    depends_on: [smoke-test]
+    on_failure: block_all
+    checks:
+      - id: gate-smoke-test-passed
+        description: "Dev smoke tests passed"
+        source: smoke-test
+        fail_if: "status != 'PASSED'"
+
+      - id: gate-artifact-signed
+        description: "Release artifact has valid signature"
+        source: provenance.sign_jar_artifact
+        fail_if: "status != 'PASSED'"
+
+      - id: gate-provenance-attached
+        description: "SLSA provenance is attached to the release record"
+        source: provenance.generate_slsa_provenance
+        fail_if: "artifact_path is null"
+
+  # ---------------------------------------------------------------------------
+  # Stage: deploy-test
+  # Deploys to the test/staging environment. Requires explicit IMAGE_TAG
+  # (no 'latest' allowed).
+  # ---------------------------------------------------------------------------
+  - id: deploy-test
+    name: Deploy to Test/Staging
+    type: deploy
+    depends_on: [gate-staging]
+    on_failure: block_all
+    environment: test
+    steps:
+      - name: Run test deployment script
+        command: "IMAGE_TAG=${{ forge.env.RELEASE_TAG }} ./scripts/deploy/test-k8.sh"
+        env:
+          KUBECONFIG: "${{ forge.secrets.TEST_KUBECONFIG }}"
+          DB_URL: "${{ forge.secrets.TEST_DB_URL }}"
+          DB_USER: "${{ forge.secrets.TEST_DB_USER }}"
+          DB_PASSWORD: "${{ forge.secrets.TEST_DB_PASSWORD }}"
+          KAFKA_BOOTSTRAP_SERVERS: "${{ forge.secrets.TEST_KAFKA_BOOTSTRAP_SERVERS }}"
+
+  # ---------------------------------------------------------------------------
+  # Stage: smoke-test-staging
+  # Runs smoke tests against the test/staging deployment.
+  # ---------------------------------------------------------------------------
+  - id: smoke-test-staging
+    name: Staging Smoke Test
+    type: test
+    depends_on: [deploy-test]
+    on_failure: block_promotion
+    steps:
+      - name: Run Spring Boot smoke test profile against staging
+        command: "./gradlew test -Dspring.profiles.active=test,smoke --no-daemon"
+        env:
+          OPSERA_REPO_URL: "${{ forge.secrets.OPSERA_REPO_URL }}"
+          OPSERA_REPO_USER: "${{ forge.secrets.OPSERA_REPO_USER }}"
+          OPSERA_REPO_TOKEN: "${{ forge.secrets.OPSERA_REPO_TOKEN }}"
+
+  # ---------------------------------------------------------------------------
+  # Stage: gate-prod
+  # Final production promotion gate. Requires explicit human approval from
+  # a release approver in @opsera/release-approvers AND a security reviewer
+  # from @opsera/security-review before production deployment proceeds.
+  # Production deployment is NEVER fully automatic.
+  # ---------------------------------------------------------------------------
+  - id: gate-prod
+    name: Production Approval Gate
+    type: gate
+    depends_on: [smoke-test-staging]
+    on_failure: block_all
+    checks:
+      - id: gate-staging-smoke-passed
+        description: "Staging smoke tests passed"
+        source: smoke-test-staging
+        fail_if: "status != 'PASSED'"
+
+    approval:
+      required: true
+      approvers:
+        - group: "@opsera/release-approvers"
+          min_approvals: 1
+        - group: "@opsera/security-review"
+          min_approvals: 1
+      timeout_hours: 72
+      change_ticket_required: true
+      separation_of_duty:
+        builder_cannot_approve: true
+        notes: "The person who triggered the build cannot be the sole approver."
+
+  # ---------------------------------------------------------------------------
+  # Stage: deploy-prod
+  # Deploys to production. 'latest' tag is rejected. Requires the immutable
+  # release tag set during the push stage.
+  # ---------------------------------------------------------------------------
+  - id: deploy-prod
+    name: Deploy to Production
+    type: deploy
+    depends_on: [gate-prod]
+    on_failure: block_all
+    environment: prod
+    steps:
+      - name: Run production deployment script
+        command: "IMAGE_TAG=${{ forge.env.RELEASE_TAG }} ./scripts/deploy/prod-k8.sh"
+        env:
+          KUBECONFIG: "${{ forge.secrets.PROD_KUBECONFIG }}"
+          DB_URL: "${{ forge.secrets.PROD_DB_URL }}"
+          DB_USER: "${{ forge.secrets.PROD_DB_USER }}"
+          DB_PASSWORD: "${{ forge.secrets.PROD_DB_PASSWORD }}"
+          KAFKA_BOOTSTRAP_SERVERS: "${{ forge.secrets.PROD_KAFKA_BOOTSTRAP_SERVERS }}"
+        post_deploy:
+          rollout_check: "kubectl rollout status deployment/sfdc-integrator-service -n sfdc-integrator-prod --timeout=300s"
+          rollback_command: "kubectl rollout undo deployment/sfdc-integrator-service -n sfdc-integrator-prod"
+
+# ---------------------------------------------------------------------------
+# Scan Suppression Policy
+# Suppression entries live in .forge/scan-suppressions.yml (not here).
+# Every suppression entry MUST include:
+#   - id: unique identifier
+#   - rule_id: the finding rule or CVE being suppressed
+#   - owner: GitHub team or user accountable for this exception
+#   - justification: why this suppression is safe (no vague "false positive")
+#   - expiry: ISO 8601 date after which the suppression auto-expires
+# Expired suppressions cause the gate to fail until renewed or removed.
+# ---------------------------------------------------------------------------
+suppression_policy:
+  file: ".forge/scan-suppressions.yml"
+  expiry_enforcement: strict
+  max_duration_days: 90
+
+# ---------------------------------------------------------------------------
+# Rollback Policy
+# On any post-push deployment failure the pipeline will:
+#   1. Stop promotion immediately (no further stages run)
+#   2. Emit the failed stage, artifact tag, and scan report URLs to the
+#      release log (no secret values are emitted)
+#   3. Direct operators to redeploy the last signed, gate-passing artifact
+#      using the rollback_command defined in the deploy stage above
+# ---------------------------------------------------------------------------
+rollback_policy:
+  on_deploy_failure: stop_and_notify
+  notify_channels:
+    - forge-release-alerts
+  diagnostic_output:
+    include: [stage_name, artifact_tag, scan_report_urls, error_summary]
+    exclude: [secrets, credentials, environment_urls, kubeconfig_context]

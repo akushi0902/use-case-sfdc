@@ -238,3 +238,10 @@
 - **Files:** 13 (+830/-6)
 - **Duration:** 399ss
 - **Approach:** Added 4 legacy routes to PostRefreshTaskController (/apex/schedulerclasses, /domainqueue/task/remove, /domainqueue/task/list, /domainmap/clear) delegating to PostRefreshTaskService extended with 4 new methods. Created DomainQueueRequest DTO with pipelineId, stepId, domainName. Created SfdcTestClassController with 2 Apex discovery routes under /apex/testclasses (list and mapping) backed by SfdcTestClassService interface. List/mapping routes return HTTP 200 + empty collection for empty states. Characterization tests cover 5 post-refresh routes (PR-001 to PR-005) and 2 Apex discovery routes (TC-001 to TC-002) with 29 total test methods.
+
+## WO-067: User Story: WO-067 - Add Forge Shipping Supply Gates
+- **Status:** completed
+- **Commit:** `92fe06a`
+- **Files:** 5 (+800/-0)
+- **Duration:** 342ss
+- **Approach:** Created .forge/pipeline.yml as the repository-owned Forge Shipping configuration with 12 ordered stages: build (gradlew clean check bootJar with Java 21, dependency locking, dependency verification, NPM guard), scan (gitleaks, semgrep, dependency-check, SBOM via cyclonedx), image-scan (trivy, conditional on Dockerfile), gate (blocks on critical/high secrets, SAST criticals, CVSS≥7.0 SCA, missing SBOM, NPM artifacts), provenance (cosign signing, SLSA provenance generation), push (immutable tag, rejects 'latest' for non-dev), deploy-dev, smoke-test, gate-staging, deploy-test, smoke-test-staging, gate-prod (human approval with separation-of-duty and change ticket), deploy-prod (with rollout health check and rollback command). Added scan-suppressions.yml with time-bounded policy requiring expiry/owner/justification. Created CODEOWNERS mapping .forge/, security-sensitive source paths, and README.md to appropriate review teams. Added validateProvenance Gradle task to build.gradle. Appended Forge Shipping runbook to README.md covering stage summary, failed gate triage, rollback, provenance lookup, scan exception review, production approval, and escalation ownership.

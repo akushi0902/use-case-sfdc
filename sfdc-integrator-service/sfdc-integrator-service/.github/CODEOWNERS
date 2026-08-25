@@ -1,0 +1,63 @@
+# CODEOWNERS — SFDC Integrator Service
+#
+# Maps file patterns to the GitHub teams that must review changes.
+# Each pattern overrides all previous patterns for the same paths.
+# The LAST matching pattern wins.
+#
+# Teams must be defined in the GitHub organization before being referenced here.
+# Individuals are listed as @github-username; teams as @org/team-slug.
+#
+# References:
+#   https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ---------------------------------------------------------------------------
+# Default owners — required review for any file not matched below
+# ---------------------------------------------------------------------------
+*                               @opsera/sfdc-integrator-maintainers
+
+# ---------------------------------------------------------------------------
+# Release pipeline and supply-chain configuration
+# Changes here affect gating policy for ALL releases. Requires security review.
+# ---------------------------------------------------------------------------
+.forge/                         @opsera/release-approvers @opsera/security-review
+.forge/pipeline.yml             @opsera/release-approvers @opsera/security-review
+.forge/scan-suppressions.yml    @opsera/security-review
+
+# ---------------------------------------------------------------------------
+# CODEOWNERS itself — changes require release approver sign-off
+# ---------------------------------------------------------------------------
+.github/CODEOWNERS              @opsera/release-approvers
+
+# ---------------------------------------------------------------------------
+# Build configuration — affects reproducibility and supply-chain guarantees
+# ---------------------------------------------------------------------------
+build.gradle                    @opsera/sfdc-integrator-maintainers @opsera/release-approvers
+settings.gradle                 @opsera/sfdc-integrator-maintainers @opsera/release-approvers
+gradle/                         @opsera/sfdc-integrator-maintainers @opsera/release-approvers
+gradlew                         @opsera/sfdc-integrator-maintainers @opsera/release-approvers
+gradlew.bat                     @opsera/sfdc-integrator-maintainers @opsera/release-approvers
+
+# ---------------------------------------------------------------------------
+# Deployment scripts — changes affect all environment deployments
+# ---------------------------------------------------------------------------
+scripts/deploy/                 @opsera/sfdc-integrator-maintainers @opsera/release-approvers
+scripts/deploy/prod-k8.sh       @opsera/release-approvers @opsera/security-review
+
+# ---------------------------------------------------------------------------
+# Operations — SLO guardrails and alerting thresholds
+# ---------------------------------------------------------------------------
+ops/                            @opsera/sre-release-ops @opsera/sfdc-integrator-maintainers
+
+# ---------------------------------------------------------------------------
+# Security-sensitive source paths
+# ---------------------------------------------------------------------------
+src/main/java/com/opsera/integrator/sfdc/governance/    @opsera/security-review
+src/main/java/com/opsera/integrator/sfdc/logging/       @opsera/security-review
+src/main/java/com/opsera/integrator/sfdc/correlation/   @opsera/security-review
+src/main/java/com/opsera/integrator/sfdc/exceptions/    @opsera/sfdc-integrator-maintainers
+
+# ---------------------------------------------------------------------------
+# Release documentation — runbook changes need release approver sign-off
+# ---------------------------------------------------------------------------
+README.md                       @opsera/sfdc-integrator-maintainers @opsera/release-approvers
+docs/                           @opsera/sfdc-integrator-maintainers

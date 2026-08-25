@@ -774,3 +774,176 @@ To force Gradle to print which JDK it resolved for the build:
 ```
 
 ---
+
+## Forge Shipping Release Pipeline
+
+The release pipeline is defined in `.forge/pipeline.yml`. It enforces all supply-chain
+controls before any artifact reaches a Kubernetes cluster.
+
+### Pipeline Stage Summary
+
+| Stage | Blocks on failure | Key checks |
+|---|---|---|
+| **build** | All downstream stages | Java 21 toolchain, `./gradlew clean check bootJar`, dependency locking, dependency verification, NPM guard, JCenter guard |
+| **scan** | All downstream stages | Secret detection (gitleaks), SAST (semgrep), SCA/dependency scan, SBOM generation |
+| **image-scan** | All downstream stages | Container image CVE scan (trivy) — skipped if no Dockerfile present |
+| **gate** | All downstream stages | No critical/high secrets, no SAST criticals, no CVSS ≥ 7.0 SCA findings, SBOM present, no NPM artifacts |
+| **provenance** | All downstream stages | JAR signing (cosign), SLSA provenance generation, provenance completeness validation |
+| **push** | All downstream stages | Immutable release tag push (no `latest` for non-dev) |
+| **deploy-dev** | Notified, not blocked | Dev cluster deployment via `scripts/deploy/dev-k8.sh` |
+| **smoke-test** | Staging promotion | Spring Boot smoke profile test — no live Salesforce or infra required |
+| **gate-staging** | Test deployment | Smoke test pass, artifact signed, provenance attached |
+| **deploy-test** | All downstream stages | Test cluster deployment via `scripts/deploy/test-k8.sh` |
+| **smoke-test-staging** | Production gate | Staging smoke test pass |
+| **gate-prod** | Production deployment | Human approval: 1× `@opsera/release-approvers` + 1× `@opsera/security-review`, change ticket required, builder cannot be sole approver |
+| **deploy-prod** | N/A (final stage) | Production deployment via `scripts/deploy/prod-k8.sh` with rollout health check |
+
+### Running the Pipeline Locally (Dry-run)
+
+```bash
+# Requires Forge CLI installed and authenticated to the Forge platform.
+# Does NOT require production cluster access, registry credentials, or signing keys.
+forge pipeline run --dry-run --file .forge/pipeline.yml
+```
+
+To validate only the build and scan stages without Forge CLI:
+```bash
+./gradlew clean check bootJar --no-daemon   # build + all check tasks
+./gradlew checkNoNpmArtifacts               # NPM guard
+./gradlew checkDependencyLockConfiguration  # lock file check
+./gradlew checkVerificationMetadata         # verification metadata check
+```
+
+### Scan Suppression Policy
+
+Scan suppressions live in `.forge/scan-suppressions.yml`. Every suppression **must** include:
+
+| Field | Requirement |
+|---|---|
+| `id` | Unique identifier — never reuse |
+| `rule_id` | Exact scanner rule ID, CVE, or CWE |
+| `owner` | GitHub team or user accountable for this exception |
+| `justification` | Specific, verifiable reason (not "false positive") |
+| `expiry` | ISO 8601 date — maximum 90 days from creation |
+
+Expired suppressions cause the gate stage to fail until renewed or removed.
+**Never suppress critical secret findings or hardcoded credential rules.**
+
+---
+
+## Release Pipeline Runbook
+
+### Failed Gate Triage
+
+When a gate stage fails, the pipeline stops immediately and emits the failed gate ID,
+affected artifact tag, and scan report URLs to the Forge release log. No secret values
+are included in diagnostic output.
+
+**Step-by-step triage:**
+
+1. **Identify the gate** — read the `gate-*` failure message from the Forge release log.
+   Each gate check has a unique ID (e.g. `gate-no-critical-secrets`, `gate-sca-cvss`).
+
+2. **Retrieve the scan report** — scan reports are attached to the release record:
+   - Secret scan: `reports/` (gitleaks output, redacted)
+   - SAST: `reports/sast-results.json`
+   - SCA: `reports/dependency-check-report.json`
+   - SBOM: `reports/sbom.json`
+   - Image scan: `reports/image-scan.json` (if image build exists)
+
+3. **Determine root cause** — distinguish between a real finding and a confirmed
+   false positive. **Do not assume false positive without verification.**
+
+4. **Remediate the finding** — fix the code, dependency, or configuration.
+   If a suppression is truly required, add a time-bounded entry to
+   `.forge/scan-suppressions.yml` with a specific justification, expiry date,
+   and accountable owner. Suppression review requires `@opsera/security-review` sign-off.
+
+5. **Re-trigger the pipeline** — commit the fix (or suppression entry), push,
+   and re-run from the failed stage.
+
+### Rollback to Last Known-Good Artifact
+
+When a post-push deployment fails, the pipeline stops and notifies the
+`forge-release-alerts` channel. To redeploy the last signed, gate-passing artifact:
+
+```bash
+# 1. Identify the last known-good release tag from the Forge release log or registry.
+#    Example: 1.2.3-release
+
+# 2. Redeploy to the affected environment using the PREVIOUS tag.
+#    Never skip gates or promote an unsigned artifact.
+IMAGE_TAG=<previous-good-tag> ./scripts/deploy/prod-k8.sh   # production
+IMAGE_TAG=<previous-good-tag> ./scripts/deploy/test-k8.sh   # staging
+IMAGE_TAG=<previous-good-tag> ./scripts/deploy/dev-k8.sh    # dev
+
+# 3. Verify rollout health.
+kubectl rollout status deployment/sfdc-integrator-service -n sfdc-integrator-prod
+
+# 4. Open a post-incident review and update the failed gate remediation plan.
+```
+
+**Do not bypass gates to speed up a rollback.** The previous signed artifact already
+passed all gates — it is safe to redeploy immediately without re-scanning.
+
+### Provenance Lookup
+
+Every release artifact has a signed provenance record attached to its Forge release entry.
+
+```bash
+# List provenance for a specific release tag (requires Forge CLI).
+forge artifact provenance --tag <release-tag> --service sfdc-integrator-service
+
+# Verify artifact signature using cosign.
+cosign verify-blob \
+  --key "$SIGNING_KEY_REF" \
+  --signature "sfdc-integrator-service-<version>.jar.sig" \
+  "sfdc-integrator-service-<version>.jar"
+```
+
+The provenance record includes:
+- Source repository URI and Git commit SHA
+- Build timestamp and Forge pipeline run ID
+- Artifact digest (SHA-256)
+- SBOM attachment reference
+- Gate pass/fail summary (no secret values)
+
+### Scan Exception Review
+
+Scan exceptions (suppressions) expire automatically. Expired entries cause the gate to fail.
+
+**Review process for new or renewed suppressions:**
+
+1. The requester adds a draft entry to `.forge/scan-suppressions.yml`.
+2. The PR requires review from `@opsera/security-review` (enforced by `.github/CODEOWNERS`).
+3. The reviewer verifies the justification is specific and the expiry is ≤ 90 days.
+4. The reviewer approves the PR. The entry becomes active when merged.
+5. The requester sets a calendar reminder before the expiry date to renew or remove.
+
+### Production Approval Process
+
+Production deployments require:
+
+1. **Change ticket** — open a change request in the organization's change management system
+   before triggering the `gate-prod` approval step.
+2. **Release approver sign-off** — at least one member of `@opsera/release-approvers`
+   must approve the Forge pipeline gate.
+3. **Security reviewer sign-off** — at least one member of `@opsera/security-review`
+   must approve the Forge pipeline gate.
+4. **Separation of duty** — the person who triggered the build cannot be the sole approver.
+5. **Approval window** — approvals expire after 72 hours. The pipeline must be triggered
+   and approved within this window or a new build is required.
+
+### Escalation Ownership
+
+| Scenario | Primary owner | Escalation path |
+|---|---|---|
+| Failed build or unit test | PR author | `@opsera/sfdc-integrator-maintainers` |
+| Failed secret scan | PR author + `@opsera/security-review` | Security lead |
+| Failed SCA finding (dependency CVE) | `@opsera/sfdc-integrator-maintainers` | `@opsera/security-review` |
+| Failed image scan | `@opsera/sfdc-integrator-maintainers` | `@opsera/security-review` |
+| Unsigned artifact / missing provenance | `@opsera/release-approvers` | Platform engineering |
+| Production deployment failure | On-call SRE (`@opsera/sre-release-ops`) | Release approver |
+| Expired suppression blocking release | Suppression `owner` field | `@opsera/security-review` |
+
+---
