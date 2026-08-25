@@ -11,6 +11,8 @@ import com.opsera.integrator.sfdc.logging.SafeLogEvent;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
+import com.opsera.integrator.sfdc.security.ShellArgumentProfile;
+import com.opsera.integrator.sfdc.security.ShellArgumentValidator;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -45,15 +47,18 @@ public class JobExecutionController {
     private final ClassificationPolicyResolver classificationResolver;
     private final SafeStructuredLogger safeLogger;
     private final AuditEventWriter auditWriter;
+    private final ShellArgumentValidator shellArgumentValidator;
 
     public JobExecutionController(QuickDeployService quickDeployService,
                                    ClassificationPolicyResolver classificationResolver,
                                    SafeStructuredLogger safeLogger,
-                                   AuditEventWriter auditWriter) {
+                                   AuditEventWriter auditWriter,
+                                   ShellArgumentValidator shellArgumentValidator) {
         this.quickDeployService = quickDeployService;
         this.classificationResolver = classificationResolver;
         this.safeLogger = safeLogger;
         this.auditWriter = auditWriter;
+        this.shellArgumentValidator = shellArgumentValidator;
     }
 
     /**
@@ -65,6 +70,18 @@ public class JobExecutionController {
     @PostMapping
     public ResponseEntity<String> startQuickDeploy(@Valid @RequestBody QuickDeployRequest request) {
         classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-start");
+
+        // Shell argument safety: validate all fields that may reach script execution before
+        // delegating to the service. Unsafe values are rejected here; ShellArgumentViolationException
+        // propagates to SfdcExceptionHandler which returns HTTP 400 with SHELL_UNSAFE_INPUT.
+        shellArgumentValidator.validate(request.getDeploymentRequestId(), "deploymentRequestId",
+                ShellArgumentProfile.DEPLOYMENT_IDENTIFIER);
+        shellArgumentValidator.validateIfPresent(request.getPipelineId(), "pipelineId",
+                ShellArgumentProfile.GENERIC_LABEL);
+        shellArgumentValidator.validateIfPresent(request.getStepId(), "stepId",
+                ShellArgumentProfile.TASK_IDENTIFIER);
+        shellArgumentValidator.validateIfPresent(request.getFallbackTaskId(), "fallbackTaskId",
+                ShellArgumentProfile.TASK_IDENTIFIER);
 
         safeLogger.logEvent(SafeLogEvent.builder()
                 .operation("quick-deploy-start")
@@ -106,6 +123,12 @@ public class JobExecutionController {
     @PostMapping("/stop")
     public ResponseEntity<String> stopQuickDeploy(@RequestBody QuickDeployStopRequest request) {
         classificationResolver.resolve(GovernanceDataCategory.JOB_METADATA, "quick-deploy-stop");
+
+        // Shell argument safety: validate shell-bound fields before service delegation.
+        shellArgumentValidator.validateIfPresent(request.getDeploymentRequestId(), "deploymentRequestId",
+                ShellArgumentProfile.DEPLOYMENT_IDENTIFIER);
+        shellArgumentValidator.validateIfPresent(request.getPipelineId(), "pipelineId",
+                ShellArgumentProfile.GENERIC_LABEL);
 
         safeLogger.logEvent(SafeLogEvent.builder()
                 .operation("quick-deploy-stop")

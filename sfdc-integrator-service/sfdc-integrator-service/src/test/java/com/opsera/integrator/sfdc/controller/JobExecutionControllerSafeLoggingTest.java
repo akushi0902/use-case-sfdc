@@ -7,6 +7,7 @@ import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicy
 import com.opsera.integrator.sfdc.logging.SafeLogEvent;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
+import com.opsera.integrator.sfdc.security.ShellArgumentValidator;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,9 @@ class JobExecutionControllerSafeLoggingTest {
 
     @MockBean
     private AuditEventWriter auditEventWriter;
+
+    @MockBean
+    private ShellArgumentValidator shellArgumentValidator;
 
     // ── quick deploy start ────────────────────────────────────────────────────
 

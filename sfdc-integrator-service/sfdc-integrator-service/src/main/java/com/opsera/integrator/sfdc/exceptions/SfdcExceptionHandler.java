@@ -1,6 +1,7 @@
 package com.opsera.integrator.sfdc.exceptions;
 
 import com.opsera.integrator.sfdc.correlation.CorrelationIdConstants;
+import com.opsera.integrator.sfdc.security.ShellArgumentViolationException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,6 +84,27 @@ public class SfdcExceptionHandler {
                 .body(new ErrorResponse(correlationId, "UNSUPPORTED_MEDIA_TYPE",
                         "Content-Type is not supported for this endpoint",
                         "Set Content-Type to application/json"));
+    }
+
+    @ExceptionHandler(ShellArgumentViolationException.class)
+    public ResponseEntity<ErrorResponse> handleShellArgumentViolation(ShellArgumentViolationException ex) {
+        String correlationId = getCorrelationId();
+        // Log with safe fields only — raw rejected value is never stored in or accessible from the exception
+        log.warn("Shell argument violation: correlationId={}, field={}, profile={}, category={}",
+                correlationId, ex.getFieldName(), ex.getProfile().name(), ex.getRejectionCategory());
+
+        ErrorResponse response = new ErrorResponse(correlationId, "SHELL_UNSAFE_INPUT",
+                "Request contains a value that is unsafe for shell execution",
+                "Ensure identifiers, branch names, and file paths use only alphanumeric characters, "
+                + "hyphens, underscores, and other profile-permitted characters. "
+                + "Command separators, newlines, path traversal sequences, and null bytes are not permitted.");
+        response.addFieldError(new SafeFieldError(
+                ex.getFieldName(),
+                "shell-unsafe-input",
+                "Value rejected by shell safety profile " + ex.getProfile().name()
+                + ": " + ex.getRejectionCategory()));
+
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(V2UnsupportedOperationException.class)

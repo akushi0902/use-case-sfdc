@@ -6,6 +6,7 @@ import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
+import com.opsera.integrator.sfdc.security.ShellArgumentValidator;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,9 @@ class JobExecutionControllerTest {
 
     @MockBean
     private AuditEventWriter auditEventWriter;
+
+    @MockBean
+    private ShellArgumentValidator shellArgumentValidator;
 
     // ---- LEGACY-001: POST /quickdeploy — start ----
 

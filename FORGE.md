@@ -161,3 +161,10 @@
 - **Files:** 6 (+242/-0)
 - **Duration:** 337ss
 - **Approach:** WO-121 (Validate Quick Deploy Requests) builds on validation enforcement already added in WO-114 (which added @NotBlank to QuickDeployRequest.deploymentRequestId and @Valid to JobExecutionController.startQuickDeploy). The controller and DTO required no production code changes — the validation contract was already complete. This WO delivers a dedicated Spring MVC test class (JobExecutionControllerQuickDeployValidationTest) that groups all seven WO-121 acceptance criteria scenarios in one place, plus a new fixtures/quickdeploy-validation/ directory with five scenario fixtures. The fallbackTaskId canonicalization (the current codebase equivalent of the WO-121 'taskId/gitTaskId' normalization) is tested with ArgumentCaptor: fallbackTaskId is preserved when present, normalized to empty string when absent, and the service is verified to be called exactly once for valid requests.
+
+## WO-122: User Story: WO-122 - Guard Shell Execution Arguments
+- **Status:** completed
+- **Commit:** `bea5b8d`
+- **Files:** 21 (+978/-1)
+- **Duration:** 778ss
+- **Approach:** Created a reusable shell argument safety layer in the security package. ShellArgumentProfile enum defines per-field allow-list regex patterns and max lengths for six field types. ShellArgumentValidator @Component enforces null/blank/oversized/null-byte/command-separator/path-traversal/allow-list checks; validateIfPresent() skips null/blank optional fields. ShellArgumentViolationException stores only fieldName, profile, and rejectionCategory — never the raw rejected value. Applied the validator in JobExecutionController (quick deploy path, both start and stop endpoints). Created MetadataDeployProcessor as a deployment-adjacent processor seam demonstrating the validation pattern. SfdcExceptionHandler maps the exception to HTTP 400 with SHELL_UNSAFE_INPUT error code and safe field-level error details. Tests use the real validator via @Import to exercise end-to-end injection rejection.
