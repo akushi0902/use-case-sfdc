@@ -1,0 +1,70 @@
+{
+  "_comment": "Parity case PARITY-QD-001: Quick Deploy — legacy /quickdeploy vs v2 /api/v2/sfdc/release-jobs (WO-153)",
+  "parityCaseId": "PARITY-QD-001",
+  "operation": "QUICK_DEPLOY",
+  "legacyRoute": {
+    "method": "POST",
+    "path": "/quickdeploy",
+    "controller": "JobExecutionController",
+    "requestFields": ["deploymentRequestId", "pipelineId", "stepId", "fallbackTaskId"],
+    "requiredFields": ["deploymentRequestId"],
+    "request": {
+      "deploymentRequestId": "deploy-req-parity-qd-001",
+      "pipelineId": "pipeline-parity-001",
+      "stepId": "step-parity-001",
+      "fallbackTaskId": "fallback-parity-001"
+    }
+  },
+  "v2Route": {
+    "method": "POST",
+    "path": "/api/v2/sfdc/release-jobs",
+    "controller": "ReleaseJobController",
+    "requestFields": ["operationType", "customerId", "sfdcToolId", "taskId", "pipelineId", "stepId", "deployRequestId"],
+    "requiredFields": ["operationType", "customerId", "sfdcToolId", "taskId"],
+    "request": {
+      "operationType": "QUICK_DEPLOY",
+      "customerId": "customer-parity-001",
+      "sfdcToolId": "sfdc-tool-parity-001",
+      "taskId": "step-parity-001",
+      "pipelineId": "pipeline-parity-001",
+      "stepId": "step-parity-001",
+      "deployRequestId": "deploy-req-parity-qd-001"
+    }
+  },
+  "fieldMapping": {
+    "deploymentRequestId": "deployRequestId",
+    "pipelineId": "pipelineId",
+    "stepId": "taskId (preferred) + stepId",
+    "fallbackTaskId": "gitTaskId (fallback)",
+    "NOTE_customerId": "NO LEGACY EQUIVALENT — must be supplied externally (intentional v2 boundary identity requirement)",
+    "NOTE_sfdcToolId": "NO LEGACY EQUIVALENT — must be supplied externally (intentional v2 boundary identity requirement)",
+    "NOTE_operationType": "INFERRED from route (/quickdeploy → QUICK_DEPLOY) in legacy; EXPLICIT in v2"
+  },
+  "parityStatus": "COEXISTING",
+  "intentionalDifferences": [
+    {
+      "aspect": "HTTP_STATUS",
+      "legacyExpected": 200,
+      "v2Expected": 202,
+      "reason": "V2 returns HTTP 202 Accepted for asynchronous commands (improved contract)"
+    },
+    {
+      "aspect": "RESPONSE_BODY_SHAPE",
+      "legacyExpected": "\"SUCCESS\" (plain text/plain)",
+      "v2Expected": "AcceptedAcknowledgement JSON with jobId, statusUrl, correlationId, operationType, state, acceptedAt",
+      "reason": "V2 provides typed acknowledgement with job tracking identifier (improved contract)"
+    },
+    {
+      "aspect": "LOCATION_HEADER",
+      "legacyExpected": "absent",
+      "v2Expected": "/api/v2/sfdc/release-jobs/{jobId}/status",
+      "reason": "V2 provides a durable status URL so callers can poll job progress (improved contract)"
+    },
+    {
+      "aspect": "IDENTITY_FIELDS",
+      "legacyExpected": "none (no customerId or sfdcToolId)",
+      "v2Expected": "customerId and sfdcToolId required",
+      "reason": "V2 adds explicit boundary identity fields to enable per-customer authorization and scoped audit (intentional stricter boundary)"
+    }
+  ]
+}

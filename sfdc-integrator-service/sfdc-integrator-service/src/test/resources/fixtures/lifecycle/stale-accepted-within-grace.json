@@ -1,0 +1,15 @@
+{
+  "_comment": "Fixture: ACCEPTED job within the 30-min grace period. Must NOT be timed out.",
+  "jobId": "job-fixture-accepted-grace-003",
+  "correlationId": "cid-fixture-accepted-grace-003",
+  "operationType": "VALIDATE",
+  "currentState": "ACCEPTED",
+  "customerIdHash": "c3d4e5f6789012345678901234567890123456789012345678901234567890cd",
+  "sfdcToolId": "sfdc-tool-fixture-grace-001",
+  "pipelineId": "pipeline-fixture-grace-001",
+  "stepId": "step-grace-validate-003",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 0,
+  "createdOffsetMinutes": 10,
+  "checkpoints": []
+}

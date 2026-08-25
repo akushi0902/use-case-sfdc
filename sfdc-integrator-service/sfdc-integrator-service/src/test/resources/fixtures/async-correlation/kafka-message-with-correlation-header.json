@@ -1,0 +1,15 @@
+{
+  "_comment": "Fixture: Kafka message produced by a service with correlation propagation enabled. The X-Correlation-Id header carries the canonical correlation identifier from HTTP ingress.",
+  "topic": "sfdc-progress",
+  "partition": 0,
+  "offset": 42,
+  "key": "pipeline-001",
+  "headers": {
+    "X-Correlation-Id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  },
+  "payload": {
+    "pipelineId": "pipeline-001",
+    "stepId": "step-deploy-01",
+    "status": "IN_PROGRESS"
+  }
+}

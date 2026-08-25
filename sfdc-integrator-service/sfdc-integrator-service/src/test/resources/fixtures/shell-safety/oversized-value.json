@@ -1,0 +1,6 @@
+{
+  "_comment": "WO-122 injection fixture: deploymentRequestId is 300 alphanumeric characters, exceeding the DEPLOYMENT_IDENTIFIER profile maximum of 256. Should be rejected with oversized-value category.",
+  "deploymentRequestId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "pipelineId": "pipeline-safe-005",
+  "stepId": "step-safe-005"
+}

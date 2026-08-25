@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic scan summary fixture for a failing scan — no real scan results or customer repository data",
+  "scanId": "scan-fixture-fail-001",
+  "pipelineId": "pipeline-fixture-cs-compat-002",
+  "totalViolations": 8,
+  "criticalCount": 3,
+  "highCount": 4,
+  "mediumCount": 1,
+  "lowCount": 0,
+  "status": "FAIL",
+  "scannedAt": "2024-01-15T11:00:00Z"
+}

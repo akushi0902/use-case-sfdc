@@ -1,0 +1,9 @@
+{
+  "_comment": "Fixture: valid v2 deploy submission. Expects HTTP 202 with AcceptedAcknowledgement (operationType=DEPLOY).",
+  "operationType": "DEPLOY",
+  "customerId": "customer-fixture-001",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "taskId": "step-deploy-fixture-001",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-deploy-fixture-001"
+}

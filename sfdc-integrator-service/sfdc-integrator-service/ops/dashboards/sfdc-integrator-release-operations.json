@@ -1,0 +1,393 @@
+{
+  "_meta": {
+    "description": "Release operations dashboard for sfdc-integrator-service. References metric names emitted by the service — do NOT hard-code threshold values; they live in ops/slo/release-workflow-guardrails.yaml.",
+    "version": "1.0",
+    "sloRef": "ops/slo/release-workflow-guardrails.yaml",
+    "importInstructions": "See docs/operations/dashboard-import-guide.md for environment-parameterisation and import steps. Always import into a non-production environment first.",
+    "safeguards": [
+      "No customer identifiers, Salesforce org identifiers, job identifiers, credentials, or raw request payloads in panel queries or annotations.",
+      "All label filters must use bounded tag values defined in ReleaseLifecycleMetrics and ReleaseCoexistenceTelemetry.",
+      "Panels that depend on metrics not yet emitted are marked status=PENDING."
+    ]
+  },
+  "dashboard": {
+    "title": "SFDC Integrator — Release Operations",
+    "uid": "sfdc-release-ops-v1",
+    "schemaVersion": 36,
+    "tags": ["sfdc", "release", "slo", "operations"],
+    "variables": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "type": "custom",
+        "options": ["dev", "staging", "prod"],
+        "current": "prod"
+      },
+      {
+        "name": "datasource",
+        "label": "Metrics Datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "description": "Select the Prometheus/Mimir datasource for this environment. Do not hard-code production datasource UIDs."
+      },
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "constant",
+        "value": "sfdc-integrator-service"
+      },
+      {
+        "name": "operation",
+        "label": "Operation",
+        "type": "custom",
+        "options": ["QUICK_DEPLOY", "DEPLOY", "VALIDATE", "all"],
+        "current": "all"
+      },
+      {
+        "name": "route_version",
+        "label": "Route Version",
+        "type": "custom",
+        "options": ["legacy", "v2", "all"],
+        "current": "all"
+      }
+    ],
+    "sections": [
+
+      {
+        "title": "API Acceptance — Request Volume and Latency (SLO-01, SLO-05)",
+        "collapsed": false,
+        "panels": [
+          {
+            "id": "p-001",
+            "title": "Release API Request Rate (per-second)",
+            "type": "timeseries",
+            "description": "Rate of release API requests segmented by routeVersion (legacy/v2), operationType, and outcome. Source: sfdc.release.api.requests counter.",
+            "status": "active",
+            "sloRef": ["slo-01-api-acceptance-latency-p95", "slo-05-server-error-rate"],
+            "query": {
+              "expr": "rate(sfdc_release_api_requests_total{application=\"${service}\"}[$__rate_interval])",
+              "legendFormat": "{{routeVersion}} / {{operationType}} / {{outcome}}",
+              "datasource": "${datasource}"
+            },
+            "thresholds": [],
+            "safetyNote": "Do not add jobId, customerId, or correlationId as grouping dimensions — high cardinality."
+          },
+          {
+            "id": "p-002",
+            "title": "API Acceptance Latency p95 — ms (SLO-01 target: < 2000 ms)",
+            "type": "timeseries",
+            "description": "p95 acceptance latency for release workflow routes. Alert fires at 2000 ms per SLO-01. Source: http.server.requests.",
+            "status": "active",
+            "sloRef": "slo-01-api-acceptance-latency-p95",
+            "query": {
+              "expr": "histogram_quantile(0.95, sum by(le, uri) (rate(http_server_requests_seconds_bucket{application=\"${service}\", uri=~\"/quickdeploy|/deploy|/validate|/api/v2/sfdc/release-jobs\", outcome=\"SUCCESS\"}[$__rate_interval])))",
+              "legendFormat": "{{uri}} p95",
+              "datasource": "${datasource}"
+            },
+            "thresholds": [
+              {"value": 2.0, "color": "red", "label": "SLO-01 limit (2000 ms)"}
+            ]
+          },
+          {
+            "id": "p-003",
+            "title": "API Acceptance — Rejection Count (Validation Failures)",
+            "type": "timeseries",
+            "description": "Rate of acceptance-layer validation rejections. Source: sfdc.release.validation.rejections counter.",
+            "status": "active",
+            "query": {
+              "expr": "rate(sfdc_release_validation_rejections_total{application=\"${service}\"}[$__rate_interval])",
+              "legendFormat": "{{operation}} rejections/s",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-004",
+            "title": "Server-Side Error Rate — % (SLO-05 target: < 1%)",
+            "type": "timeseries",
+            "description": "Fraction of release workflow requests returning 5xx. Source: http.server.requests outcome=SERVER_ERROR.",
+            "status": "active",
+            "sloRef": "slo-05-server-error-rate",
+            "query": {
+              "expr": "100 * rate(http_server_requests_seconds_count{application=\"${service}\", uri=~\"/quickdeploy|/deploy|/validate|/api/v2/sfdc/release-jobs\", outcome=\"SERVER_ERROR\"}[$__rate_interval]) / on() group_left() rate(http_server_requests_seconds_count{application=\"${service}\", uri=~\"/quickdeploy|/deploy|/validate|/api/v2/sfdc/release-jobs\"}[$__rate_interval])",
+              "legendFormat": "5xx error rate %",
+              "datasource": "${datasource}"
+            },
+            "thresholds": [
+              {"value": 1.0, "color": "red", "label": "SLO-05 limit (1%)"}
+            ]
+          }
+        ]
+      },
+
+      {
+        "title": "Release Lifecycle — Outcomes and Active Jobs",
+        "collapsed": false,
+        "panels": [
+          {
+            "id": "p-005",
+            "title": "Acceptance Attempts by Operation and Outcome",
+            "type": "timeseries",
+            "description": "Release acceptance attempts broken down by operation (QUICK_DEPLOY, DEPLOY, VALIDATE) and outcome (accepted, rejected, dispatched, failed). Source: sfdc.release.acceptance.attempts.",
+            "status": "active",
+            "query": {
+              "expr": "rate(sfdc_release_acceptance_attempts_total{application=\"${service}\"}[$__rate_interval])",
+              "legendFormat": "{{operation}} / {{outcome}}",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-006",
+            "title": "Active Workflows (Gauge)",
+            "type": "stat",
+            "description": "Current number of active (accepted but not yet terminal) workflow executions. Source: sfdc.release.active.workflows gauge.",
+            "status": "active",
+            "query": {
+              "expr": "sfdc_release_active_workflows{application=\"${service}\"}",
+              "legendFormat": "active workflows",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-007",
+            "title": "Dispatch Failures by Operation and Exception Category",
+            "type": "timeseries",
+            "description": "Rate of dispatch failures segmented by operation and exception_category (validation, authorization, dispatch, unknown). Source: sfdc.release.dispatch.failures.",
+            "status": "active",
+            "query": {
+              "expr": "rate(sfdc_release_dispatch_failures_total{application=\"${service}\"}[$__rate_interval])",
+              "legendFormat": "{{operation}} / {{exception_category}}",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-008",
+            "title": "Execution Duration p95 — ms",
+            "type": "timeseries",
+            "description": "p95 release command execution duration. Source: sfdc.release.execution.duration timer (bounded by operation and outcome).",
+            "status": "active",
+            "query": {
+              "expr": "histogram_quantile(0.95, sum by(le, operation, outcome) (rate(sfdc_release_execution_duration_seconds_bucket{application=\"${service}\"}[$__rate_interval])))",
+              "legendFormat": "{{operation}} / {{outcome}} p95",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-009",
+            "title": "Cancellation Attempts by Outcome",
+            "type": "timeseries",
+            "description": "Cancellation attempt rate broken down by outcome (cancelled, failed). Source: sfdc.release.cancellation.attempts.",
+            "status": "active",
+            "query": {
+              "expr": "rate(sfdc_release_cancellation_attempts_total{application=\"${service}\"}[$__rate_interval])",
+              "legendFormat": "cancellation / {{outcome}}",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-010",
+            "title": "Job Final-Status Coverage — % (SLO-03 target: ≥ 99%)",
+            "type": "timeseries",
+            "description": "Fraction of accepted jobs reaching a terminal state within 1 hour. Requires durable lifecycle persistence (PostgreSQL).",
+            "status": "PENDING",
+            "statusReason": "Durable lifecycle persistence not yet implemented. Activate when lifecycle persistence ships.",
+            "sloRef": "slo-03-final-status-coverage",
+            "query": {
+              "expr": "# PENDING: sfdc_job_terminal_count / sfdc_job_accepted_count * 100",
+              "legendFormat": "final-status coverage %",
+              "datasource": "${datasource}"
+            }
+          }
+        ]
+      },
+
+      {
+        "title": "Checkpoint Freshness (SLO-04)",
+        "collapsed": false,
+        "panels": [
+          {
+            "id": "p-011",
+            "title": "Checkpoint Freshness — max staleness seconds (SLO-04 target: ≤ 60 s)",
+            "type": "timeseries",
+            "description": "Maximum age of the most recent checkpoint across all active jobs. Alert fires when any active job checkpoint exceeds 60 s.",
+            "status": "PENDING",
+            "statusReason": "Requires Kafka checkpoint persistence. Use Kafka consumer lag (p-012) as a proxy until persistence is available.",
+            "sloRef": "slo-04-checkpoint-freshness",
+            "query": {
+              "expr": "# PENDING: max(time() - sfdc_job_checkpoint_timestamp_seconds) by (application)",
+              "legendFormat": "max checkpoint staleness s",
+              "datasource": "${datasource}"
+            },
+            "thresholds": [
+              {"value": 60, "color": "red", "label": "SLO-04 limit (60 s)"}
+            ]
+          },
+          {
+            "id": "p-012",
+            "title": "Kafka Consumer Lag — Checkpoint Topic (proxy for SLO-04)",
+            "type": "timeseries",
+            "description": "Kafka consumer lag on the checkpoint progress topic. Growing lag indicates checkpoint events are not being consumed, which increases staleness risk.",
+            "status": "active",
+            "query": {
+              "expr": "kafka_consumer_group_lag{topic=\"sfdc-job-checkpoints\", application=\"${service}\"}",
+              "legendFormat": "consumer lag",
+              "datasource": "${datasource}"
+            },
+            "safetyNote": "Filter by bounded topic name only. Do not add job_id or customer_id dimensions."
+          }
+        ]
+      },
+
+      {
+        "title": "Status Lookup Latency (SLO-02 — Pending)",
+        "collapsed": true,
+        "panels": [
+          {
+            "id": "p-013",
+            "title": "Status Lookup Latency p95 — ms (SLO-02 target: < 1000 ms)",
+            "type": "timeseries",
+            "description": "p95 latency for job status query route. Pending status route implementation.",
+            "status": "PENDING",
+            "statusReason": "Status route not yet implemented. Activate when /api/v2/sfdc/release-jobs/{jobId}/status ships.",
+            "sloRef": "slo-02-status-lookup-latency-p95",
+            "query": {
+              "expr": "# PENDING: histogram_quantile(0.95, sum by(le, uri) (rate(http_server_requests_seconds_bucket{uri=~\"/api/v2/sfdc/release-jobs/.*/status\", outcome=\"SUCCESS\"}[$__rate_interval])))",
+              "legendFormat": "status lookup p95",
+              "datasource": "${datasource}"
+            },
+            "thresholds": [
+              {"value": 1.0, "color": "red", "label": "SLO-02 limit (1000 ms)"}
+            ]
+          }
+        ]
+      },
+
+      {
+        "title": "Dependency and Runtime Health",
+        "collapsed": false,
+        "panels": [
+          {
+            "id": "p-014",
+            "title": "Kafka Connectivity Health",
+            "type": "stat",
+            "description": "Spring Boot health indicator for Kafka connectivity (kafkaConnectivity). Reports UP/DOWN/UNKNOWN. Source: /actuator/health.",
+            "status": "active",
+            "query": {
+              "expr": "spring_boot_health_status{application=\"${service}\", name=\"kafkaConnectivity\"}",
+              "legendFormat": "Kafka health",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-015",
+            "title": "Hazelcast Cluster Health",
+            "type": "stat",
+            "description": "Spring Boot health indicator for Hazelcast cluster (hazelcastCluster). Reports UP/DOWN/UNKNOWN.",
+            "status": "active",
+            "query": {
+              "expr": "spring_boot_health_status{application=\"${service}\", name=\"hazelcastCluster\"}",
+              "legendFormat": "Hazelcast health",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-016",
+            "title": "Kubernetes Readiness Probe",
+            "type": "stat",
+            "description": "Spring Boot readiness probe status. Reports status from the readiness health group (db, kafkaConnectivity, hazelcastCluster, jobDispatchReadiness).",
+            "status": "active",
+            "query": {
+              "expr": "spring_boot_readiness_state{application=\"${service}\"}",
+              "legendFormat": "K8s readiness",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-017",
+            "title": "Kubernetes Liveness Probe",
+            "type": "stat",
+            "description": "Spring Boot liveness probe status.",
+            "status": "active",
+            "query": {
+              "expr": "spring_boot_liveness_state{application=\"${service}\"}",
+              "legendFormat": "K8s liveness",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-018",
+            "title": "Job Dispatch Readiness Health",
+            "type": "stat",
+            "description": "Spring Boot health indicator for job dispatch readiness (jobDispatchReadiness). Reports worker-dispatch or legacy-only mode.",
+            "status": "active",
+            "query": {
+              "expr": "spring_boot_health_status{application=\"${service}\", name=\"jobDispatchReadiness\"}",
+              "legendFormat": "dispatch readiness",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-019",
+            "title": "JVM Heap Usage — % of Max",
+            "type": "timeseries",
+            "description": "JVM heap usage as a fraction of maximum heap. Source: jvm.memory.used / jvm.memory.max for heap area.",
+            "status": "active",
+            "query": {
+              "expr": "100 * jvm_memory_used_bytes{application=\"${service}\", area=\"heap\"} / jvm_memory_max_bytes{application=\"${service}\", area=\"heap\"}",
+              "legendFormat": "heap %",
+              "datasource": "${datasource}"
+            }
+          }
+        ]
+      },
+
+      {
+        "title": "Legacy Compatibility Guardrails (SLO-06)",
+        "collapsed": false,
+        "panels": [
+          {
+            "id": "p-020",
+            "title": "Legacy Route Request Volume",
+            "type": "timeseries",
+            "description": "Request rate to legacy routes (/quickdeploy, /deploy, /validate) vs v2 routes. Use routeVersion=legacy label from sfdc.release.api.requests.",
+            "status": "active",
+            "sloRef": "slo-06-legacy-compatibility",
+            "query": {
+              "expr": "rate(sfdc_release_api_requests_total{application=\"${service}\", routeVersion=\"legacy\"}[$__rate_interval])",
+              "legendFormat": "legacy {{operationType}} / {{outcome}}",
+              "datasource": "${datasource}"
+            }
+          },
+          {
+            "id": "p-021",
+            "title": "Legacy Contract Conformance Ratio — % (SLO-06 target: ≥ 99.9%)",
+            "type": "timeseries",
+            "description": "Fraction of legacy route requests returning a response conformant with characterised legacy contracts. Coexistence period only.",
+            "status": "PENDING",
+            "statusReason": "Automated canary contract testing pipeline not yet wired. Activate when canary sampling is available.",
+            "sloRef": "slo-06-legacy-compatibility",
+            "query": {
+              "expr": "# PENDING: canary_probe_legacy_contract_conformant_ratio{application=\"${service}\"} * 100",
+              "legendFormat": "legacy conformance %",
+              "datasource": "${datasource}"
+            },
+            "thresholds": [
+              {"value": 99.9, "color": "red", "label": "SLO-06 floor (99.9%)"}
+            ]
+          },
+          {
+            "id": "p-022",
+            "title": "V2 Route Request Volume by Operation",
+            "type": "timeseries",
+            "description": "Request rate to v2 routes segmented by operationType and outcome. Monitors migration traffic shifts.",
+            "status": "active",
+            "query": {
+              "expr": "rate(sfdc_release_api_requests_total{application=\"${service}\", routeVersion=\"v2\"}[$__rate_interval])",
+              "legendFormat": "v2 {{operationType}} / {{outcome}}",
+              "datasource": "${datasource}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "_comment": "JWT claims map with an exp value in the past (Unix epoch 1000). JwtValidators.createDefault() includes expiry validation; a decoder with these claims would fail with token expired. This fixture documents the expiry scenario — unit tests build Jwt objects with past exp directly without needing this file.",
+  "sub": "test-caller-subject-007",
+  "client_id": "sfdc-test-client-007",
+  "scope": "quick-deploy",
+  "iss": "https://idp.example.internal",
+  "aud": ["sfdc-integrator"],
+  "exp": 1000,
+  "iat": 1
+}

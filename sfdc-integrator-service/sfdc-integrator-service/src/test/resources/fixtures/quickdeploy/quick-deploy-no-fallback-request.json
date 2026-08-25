@@ -1,0 +1,6 @@
+{
+  "_comment": "Valid quick deploy start request with fallbackTaskId omitted. Controller normalizes null fallbackTaskId to empty string before delegation.",
+  "deploymentRequestId": "deploy-req-compat-002",
+  "pipelineId": "pipeline-compat-002",
+  "stepId": "step-compat-qdeploy-02"
+}

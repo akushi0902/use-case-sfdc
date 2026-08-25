@@ -1,0 +1,280 @@
+spring:
+  application:
+    name: sfdc-integrator-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Production: set OAUTH2_JWK_SET_URI (preferred — no startup HTTP call) or
+          # OAUTH2_ISSUER_URI (triggers OIDC discovery at startup).
+          # Do NOT commit real endpoints or signing keys here.
+          jwk-set-uri: ${OAUTH2_JWK_SET_URI:}
+          issuer-uri: ${OAUTH2_ISSUER_URI:}
+
+  datasource:
+    # Production datasource: all values from environment variables.
+    # Missing variables cause a clear startup failure — no fallback to embedded databases.
+    # Do NOT commit real URLs, usernames, or passwords here.
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Conservative pool size for a single-instance deployment; tune per environment.
+      maximum-pool-size: 5
+      connection-timeout: 20000
+
+  flyway:
+    enabled: true
+    # All versioned migration scripts live under db/migration.
+    # Scripts are immutable once applied; fixes require a new versioned script.
+    locations: classpath:db/migration
+    # Do NOT set baseline-on-migrate: true in production — it hides checksum mismatches
+    # on databases that already have tables from a prior migration.
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    out-of-order: false
+
+sfdc:
+  secrets:
+    # Vault service base URL for future managed secret integration.
+    # Classification: NON-SECRET endpoint reference (the URL itself is not a secret).
+    # Injection: VAULT_BASE_URL environment variable (Kubernetes ConfigMap).
+    # Required: Optional. If set, must not contain an unsafe sample placeholder.
+    # Owner: Platform Security team. Rotation: not applicable (endpoint reference).
+    vault-base-url: ${VAULT_BASE_URL:}
+    # Expected OAuth2 audience claim for JWT token validation.
+    # Classification: CONFIDENTIAL metadata (identifies this service's identity namespace).
+    # Injection: OAUTH2_EXPECTED_AUDIENCE environment variable (Kubernetes ConfigMap).
+    # Required: API pod — must not be blank. Startup fails fast if blank or unsafe placeholder.
+    # Owner: Platform Security team. Rotation: when service name changes.
+    oauth2-expected-audience: ${OAUTH2_EXPECTED_AUDIENCE:sfdc-integrator}
+
+  security:
+    # Set to false only in test profiles. Must be true in all CI and production environments.
+    # When false, the JWT security filter chain is not registered; disable only via
+    # application-test.properties, never in application.yaml.
+    enabled: true
+    # Expected JWT audience claim value. Tokens whose aud claim does not include this value
+    # are rejected before controller execution. Set via OAUTH2_EXPECTED_AUDIENCE in production.
+    # Also validated by sfdc.secrets.oauth2-expected-audience — must not be blank or unsafe.
+    expected-audience: ${OAUTH2_EXPECTED_AUDIENCE:sfdc-integrator}
+
+  audit:
+    # Set to false only for local development without a database. Must be true in all
+    # CI and production environments — governed mutations fail closed when audit is disabled
+    # and an audit event cannot be written.
+    enabled: true
+
+  v2:
+    release:
+      routes:
+        # Enable or disable the v2 release route family (/api/v2/sfdc/release-jobs).
+        # Set to false for canary rollback without affecting legacy routes.
+        enabled: true
+        # Per-operation allow-list. Default-deny: unconfigured operation types are blocked.
+        # Remove an operation type or set it to false to disable it without restarting the service
+        # (requires a live-reload capable configuration source in production).
+        operations:
+          QUICK_DEPLOY: true
+          DEPLOY: true
+          VALIDATE: true
+          CANCEL: false
+        # When true, GET status lookups for previously accepted jobs remain available even when
+        # v2 submission is globally disabled. Allows monitoring during a rollback window.
+        read-only-status-fallback: true
+
+  worker-dispatch:
+    # Master kill switch for Kubernetes worker dispatch.
+    # Must be false in production until worker scheduling platform is certified.
+    # Rollback: set enabled=false to revert all traffic to legacy execution paths.
+    enabled: false
+    # Per-command-type worker dispatch flags. Only evaluated when enabled=true.
+    # Set a command type to true to route that operation type to worker pods.
+    # Supported values: QUICK_DEPLOY, DEPLOY, VALIDATE, CANCEL
+    command-types:
+      QUICK_DEPLOY: false
+      DEPLOY: false
+      VALIDATE: false
+      CANCEL: false
+    # Timeout for worker-dispatched jobs, in seconds.
+    # Worker pods are terminated if the job does not complete within this window.
+    timeout-seconds: 1800
+
+  governance:
+    classification:
+      # Maps each GovernanceDataCategory to a DataClassification tier.
+      # Unknown or unconfigured categories fail closed to CONFIDENTIAL.
+      # Values: PUBLIC | INTERNAL | CONFIDENTIAL | RESTRICTED
+      category-mappings:
+        JOB_METADATA: CONFIDENTIAL
+        LIFECYCLE_CHECKPOINT: CONFIDENTIAL
+        SFDC_ARTIFACT: RESTRICTED
+        OPERATIONAL_LOG: INTERNAL
+        AUDIT_CONTEXT: CONFIDENTIAL
+        CACHE_ENTRY: INTERNAL
+      # Maps each GovernanceDataCategory to a RetentionCategoryHint.
+      # Values: SHORT_TERM | STANDARD | EXTENDED | AUDIT_MANDATED
+      retention-hints:
+        JOB_METADATA: STANDARD
+        LIFECYCLE_CHECKPOINT: STANDARD
+        SFDC_ARTIFACT: EXTENDED
+        OPERATIONAL_LOG: SHORT_TERM
+        AUDIT_CONTEXT: EXTENDED
+        CACHE_ENTRY: SHORT_TERM
+
+    retention:
+      # Maps each RetentionCategory to a retention window in days.
+      # STANDARD is the fail-closed default — must always be configured.
+      # These values are non-secret configuration and may appear in operational logs
+      # (category name + duration only — no customer or record identifiers).
+      # GDPR/CCPA baseline:
+      #   SHORT_TERM:      30 days  — transient operational data
+      #   STANDARD:       365 days  — Confidential job metadata (GDPR Article 17 default)
+      #   EXTENDED:      2555 days  — Restricted Salesforce artifacts (7 years, SOX baseline)
+      #   AUDIT_MANDATED: 3650 days — Audit trail records (10 years, regulatory mandate)
+      duration-days:
+        SHORT_TERM: 30
+        STANDARD: 365
+        EXTENDED: 2555
+        AUDIT_MANDATED: 3650
+
+      purge:
+        # Master kill switch for automated retention purge.
+        # Must be explicitly set to true by environment owners before purge runs.
+        # Never enable in application.yaml — override per environment via ConfigMap.
+        enabled: false
+        # Purge operating mode: DISABLED | DRY_RUN | ENFORCE
+        # DISABLED: no queries or mutations; DRY_RUN: select but do not erase;
+        # ENFORCE: physically erase eligible governed records.
+        # Safe default: DISABLED — environment owners must promote to DRY_RUN first.
+        mode: DISABLED
+        # Spring cron expression for the scheduled purge run (6-field: sec min hr dom mon dow).
+        # Default: 2 AM UTC daily. Override per environment via ConfigMap.
+        cron: "0 0 2 * * *"
+        # Maximum records to process per purge run. Bounds blast radius.
+        # Increase only after dry-run validation confirms candidate selection is correct.
+        batch-size: 100
+        # Maximum wall-clock seconds for a single purge run before it is aborted.
+        # Prevents long-running purge from impacting API response time.
+        max-runtime-seconds: 300
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        # Only health and metrics are exposed. env, beans, heapdump, threaddump,
+        # configprops, and other sensitive endpoints are intentionally excluded.
+        include: "health,metrics"
+  endpoint:
+    health:
+      # show-details=always is safe here because /actuator/* is an internal path
+      # not reachable from outside the pod network. Kubernetes liveness/readiness
+      # probes hit this endpoint directly inside the cluster.
+      show-details: always
+      show-components: always
+      probes:
+        # Enables /actuator/health/liveness and /actuator/health/readiness for Kubernetes.
+        enabled: true
+      group:
+        readiness:
+          # Include custom indicators in the readiness group.
+          # kafkaConnectivity, hazelcastCluster, jobDispatchReadiness must match the
+          # indicator bean names (Spring lower-cases and strips "HealthIndicator" suffix).
+          include: "db,kafkaConnectivity,hazelcastCluster,jobDispatchReadiness"
+          show-details: always
+        liveness:
+          include: "livenessState"
+  metrics:
+    tags:
+      # Common tag applied to all metrics — allows filtering by service in the metrics backend.
+      application: ${spring.application.name:sfdc-integrator-service}
+    distribution:
+      percentiles-histogram:
+        sfdc.release.execution.duration: true
+      slo:
+        sfdc.release.execution.duration: "1ms,10ms,100ms,500ms,1000ms,5000ms"
+  tracing:
+    sampling:
+      # 1.0 = 100% sampling. Override per environment: OTEL_SAMPLING_PROBABILITY=0.1 for production.
+      # Set to 0.0 to disable sampling without removing the tracing dependency.
+      probability: ${OTEL_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      # OTLP endpoint for span export. Left empty by default — no spans are exported unless
+      # OTEL_EXPORTER_OTLP_ENDPOINT is set in the runtime environment (e.g. Kubernetes ConfigMap).
+      # When empty, Spring Boot auto-configuration keeps the no-op exporter active.
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:}
+
+springdoc:
+  # Documentation endpoint: GET /api-docs returns the generated OpenAPI JSON.
+  # NOTE: /api-docs is the documentation endpoint — it is NOT the business v2 route
+  # namespace (/api/v2/sfdc/...). Consumers must not confuse the two URL prefixes.
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    # List v2 release group first so migrating consumers find it immediately
+    display-request-duration: true
+  group-configs:
+    - group: v2-release-api
+      display-name: "V2 Release API"
+      paths-to-match:
+        - /api/v2/**
+    - group: legacy-release-api
+      display-name: "Legacy Release API (Coexistence)"
+      paths-to-match:
+        - /quickdeploy/**
+        - /deploy
+        - /validate
+        - /datamigration/**
+        - /postRefreshTask/**
+
+logging:
+  pattern:
+    # Includes the MDC correlationId field so every log line is traceable to a specific request.
+    # Falls back to 'none' when the filter has not populated MDC (e.g. background threads).
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [cid=%X{correlationId:-none}] - %msg%n"
+  level:
+    root: INFO
+    com.opsera.integrator.sfdc: DEBUG
+
+  kafka:
+    # Kafka bootstrap servers for checkpoint consumers.
+    # Set KAFKA_BOOTSTRAP_SERVERS in production (e.g. kafka-broker-1:9092,kafka-broker-2:9092).
+    # No default — checkpoint listener will not start without this value when enabled.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:}
+    consumer:
+      # Disable auto-commit — checkpoints are committed after successful durable persistence.
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+sfdc:
+  lifecycle:
+    timeout:
+      # Set to false to disable the stalled-job timeout monitor during emergency maintenance.
+      enabled: true
+      # Interval between monitor scans (seconds). Default 300 (5 min) limits DB load
+      # while detecting stale jobs within one polling interval after the threshold elapses.
+      scan-interval-seconds: 300
+      # Jobs with no state change for longer than this threshold are timed out.
+      # Default 240 min (4 hours) covers the longest expected Salesforce full-org deployment.
+      stale-threshold-minutes: 240
+      # Minimum time after acceptance before a job with no checkpoints can be timed out.
+      # Protects freshly accepted jobs awaiting worker dispatch.
+      accepted-grace-period-minutes: 30
+      # Maximum jobs finalized per scan — caps the blast radius of a single monitor run.
+      max-jobs-per-scan: 100
+
+  checkpoint:
+    kafka:
+      # Set to true to enable the KafkaCheckpointListener.
+      # Disabled by default so existing deployments are unaffected until ready to enable.
+      enabled: ${SFDC_CHECKPOINT_KAFKA_ENABLED:false}
+      # Topic emitting job checkpoint progress events.
+      topic: ${SFDC_CHECKPOINT_TOPIC:sfdc-job-checkpoints}
+      # Consumer group for checkpoint persistence.
+      consumer-group: ${SFDC_CHECKPOINT_CONSUMER_GROUP:sfdc-checkpoint-persistence}

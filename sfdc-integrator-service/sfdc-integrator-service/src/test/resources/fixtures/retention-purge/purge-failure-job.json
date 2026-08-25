@@ -1,0 +1,11 @@
+{
+  "_comment": "Retention metadata for a job where the purge erasure fails — failed count should increment, run should continue",
+  "jobRef": "job-purge-failure-001",
+  "retentionCategory": "STANDARD",
+  "classification": "CONFIDENTIAL",
+  "retentionStart": "2021-01-01T00:00:00Z",
+  "retentionExpiration": "2022-01-01T00:00:00Z",
+  "legalHold": false,
+  "purgeEligibilityStatus": "ELIGIBLE",
+  "purgedAt": null
+}

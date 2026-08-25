@@ -1,0 +1,6 @@
+{
+  "deploymentRequestId": "deploy-req-boundary-001",
+  "pipelineId": "pipeline-boundary-001",
+  "stepId": "step-boundary-qdeploy-01",
+  "fallbackTaskId": "fallback-boundary-001"
+}

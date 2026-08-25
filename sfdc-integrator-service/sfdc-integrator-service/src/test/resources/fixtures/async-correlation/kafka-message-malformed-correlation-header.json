@@ -1,0 +1,15 @@
+{
+  "_comment": "Fixture: Kafka message with a malformed X-Correlation-Id header that fails the safe pattern check (contains spaces, angle brackets, and script content). The listener must sanitize this by discarding the malformed value and generating a safe UUID replacement.",
+  "topic": "sfdc-progress",
+  "partition": 1,
+  "offset": 3,
+  "key": "pipeline-003",
+  "headers": {
+    "X-Correlation-Id": "bad value <script>alert(1)</script>"
+  },
+  "payload": {
+    "pipelineId": "pipeline-003",
+    "stepId": "step-deploy-02",
+    "status": "FAILED"
+  }
+}

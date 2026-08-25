@@ -1,0 +1,8 @@
+{
+  "_comment": "Synthetic JWT claims fixture for a principal with the quickdeploy.cancel scope only",
+  "sub": "fixture-subject-004",
+  "client_id": "fixture-client-004",
+  "iss": "https://idp.fixture.example.internal/",
+  "aud": ["sfdc-integrator"],
+  "scope": "quickdeploy.cancel"
+}

@@ -1,0 +1,16 @@
+# Fixture: All P0 release operations enabled in v2 routes.
+# QUICK_DEPLOY, DEPLOY, and VALIDATE are allowed. CANCEL remains disabled until
+# full implementation is available.
+# This is the intended production default during steady-state canary operation.
+
+sfdc:
+  v2:
+    release:
+      routes:
+        enabled: true
+        operations:
+          QUICK_DEPLOY: true
+          DEPLOY: true
+          VALIDATE: true
+          CANCEL: false
+        read-only-status-fallback: true

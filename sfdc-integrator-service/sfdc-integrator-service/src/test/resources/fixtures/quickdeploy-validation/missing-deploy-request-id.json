@@ -1,0 +1,6 @@
+{
+  "_comment": "WO-121 fixture: quick deploy request with deploymentRequestId field absent. Jakarta @NotBlank must reject this before any service dispatch.",
+  "pipelineId": "pipeline-val-003",
+  "stepId": "step-val-qdeploy-03",
+  "fallbackTaskId": "fallback-task-val-003"
+}

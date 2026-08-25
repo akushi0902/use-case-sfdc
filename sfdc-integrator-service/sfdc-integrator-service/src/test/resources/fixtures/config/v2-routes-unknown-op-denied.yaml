@@ -1,0 +1,16 @@
+# Fixture: Default-deny behavior for unconfigured and unknown operation types.
+# Only explicitly listed and enabled operation types are allowed.
+# Any operation type absent from the allow-list is denied even when global enabled=true.
+#
+# Example: ROLLBACK and PACKAGE are not listed → both return HTTP 422 with errorCode V2_OPERATION_DISABLED.
+# This is the fail-closed contract for unknown operation types.
+
+sfdc:
+  v2:
+    release:
+      routes:
+        enabled: true
+        operations:
+          QUICK_DEPLOY: true
+          # DEPLOY, VALIDATE, CANCEL, ROLLBACK, PACKAGE — not listed, so fail-closed (denied)
+        read-only-status-fallback: true

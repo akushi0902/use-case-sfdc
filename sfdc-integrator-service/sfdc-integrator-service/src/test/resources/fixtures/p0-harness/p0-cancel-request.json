@@ -1,0 +1,4 @@
+{
+  "_comment": "P0 Harness fixture: cancellation request for an active release job.",
+  "safeReason": "P0 test harness — cancellation of active release job"
+}

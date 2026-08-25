@@ -1,0 +1,6 @@
+{
+  "_comment": "WO-122 fixture: sample values demonstrating safe branch-name profile values. Used in ShellArgumentValidatorTest to confirm allow-listed branch name patterns.",
+  "branchName": "feature/SFDC-1234-quick-deploy-validation",
+  "relativeArtifactPath": "src/metadata/classes/QuickDeploy.cls",
+  "deploymentRequestId": "deploy-req-branch-001"
+}

@@ -1,0 +1,15 @@
+{
+  "_comment": "Fixture: audit event emitted when a release job is handed off to the dispatch worker (DISPATCH_HANDOFF operation). Actor type is SYSTEM — no external caller context is available for internal lifecycle mutations.",
+  "eventId": "audit-fixture-dispatch-handoff-001",
+  "correlationId": "cid-fixture-dispatch-001",
+  "actorType": "SYSTEM",
+  "actorRef": "cid-fixture-dispatch-001",
+  "resourceType": "LIFECYCLE_JOB",
+  "resourceRef": "job-fixture-dispatch-001",
+  "operation": "DISPATCH_HANDOFF",
+  "classification": "CONFIDENTIAL",
+  "safeMetadata": "{\"jobId\":\"job-fixture-dispatch-001\",\"fromState\":\"ACCEPTED\",\"toState\":\"DISPATCHING\",\"operationType\":\"QUICK_DEPLOY\"}",
+  "eventTimestamp": "2024-01-01T10:00:00Z",
+  "requestSource": "JobLifecycleService.transition",
+  "retentionExpiryAt": "2025-01-01T10:00:00Z"
+}

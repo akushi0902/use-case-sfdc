@@ -1,0 +1,15 @@
+{
+  "_comment": "Fixture: audit event emitted when a lifecycle checkpoint is persisted (CHECKPOINT_PERSISTED operation). Checkpoints are best-effort secondary events; audit write failure logs an error but does not fail the primary state transition.",
+  "eventId": "audit-fixture-checkpoint-001",
+  "correlationId": "cid-fixture-checkpoint-001",
+  "actorType": "SYSTEM",
+  "actorRef": "cid-fixture-checkpoint-001",
+  "resourceType": "LIFECYCLE_JOB",
+  "resourceRef": "job-fixture-checkpoint-001",
+  "operation": "CHECKPOINT_PERSISTED",
+  "classification": "CONFIDENTIAL",
+  "safeMetadata": "{\"jobId\":\"job-fixture-checkpoint-001\",\"checkpointCode\":\"WORKER_EXECUTION_STARTED\",\"toState\":\"RUNNING\"}",
+  "eventTimestamp": "2024-01-01T10:01:00Z",
+  "requestSource": "JobLifecycleService.appendCheckpoint",
+  "retentionExpiryAt": "2025-01-01T10:01:00Z"
+}

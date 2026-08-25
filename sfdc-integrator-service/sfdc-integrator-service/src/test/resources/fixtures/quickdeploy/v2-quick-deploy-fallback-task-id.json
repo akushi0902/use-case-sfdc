@@ -1,0 +1,10 @@
+{
+  "_comment": "Fixture: v2 quick deploy request with both taskId and gitTaskId supplied. taskId must take precedence over gitTaskId.",
+  "deployRequestId": "deploy-req-v2-fixture-002",
+  "customerId": "customer-v2-fixture-002",
+  "sfdcToolId": "sfdc-tool-v2-fixture-002",
+  "taskId": "primary-task-v2-fixture-002",
+  "gitTaskId": "fallback-git-task-v2-fixture-002",
+  "pipelineId": "pipeline-v2-fixture-002",
+  "stepId": "step-v2-fixture-002"
+}

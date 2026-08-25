@@ -1,0 +1,7 @@
+{
+  "_comment": "WO-122 fixture: valid quick deploy request with safe deployment identifier, pipeline ID, step ID, and fallback task ID. All values conform to shell argument allow-list profiles.",
+  "deploymentRequestId": "deploy-req-safe-001",
+  "pipelineId": "pipeline-safe-001",
+  "stepId": "step-safe-qdeploy-01",
+  "fallbackTaskId": "fallback-safe-001"
+}

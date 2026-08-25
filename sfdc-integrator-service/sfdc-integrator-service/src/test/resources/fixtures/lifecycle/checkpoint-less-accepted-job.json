@@ -1,0 +1,15 @@
+{
+  "_comment": "Fixture: ACCEPTED job with no checkpoints, recently created. Grace period applies.",
+  "jobId": "job-fixture-ckptless-accepted-007",
+  "correlationId": "cid-fixture-ckptless-accepted-007",
+  "operationType": "VALIDATE",
+  "currentState": "ACCEPTED",
+  "customerIdHash": "a7b8c9d0e1f2345678901234567890123456789012345678901234567890a7b8",
+  "sfdcToolId": "sfdc-tool-fixture-fresh-002",
+  "pipelineId": "pipeline-fixture-fresh-002",
+  "stepId": "step-fresh-validate-007",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 0,
+  "createdOffsetMinutes": 5,
+  "checkpoints": []
+}

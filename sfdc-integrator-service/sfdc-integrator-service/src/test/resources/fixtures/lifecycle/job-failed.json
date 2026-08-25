@@ -1,0 +1,17 @@
+{
+  "_comment": "Fixture: job in FAILED terminal state with diagnostic summary. safeSummary contains sanitized error info — no stack traces or credentials.",
+  "jobId": "job-fixture-failed-004",
+  "correlationId": "cid-fixture-failed-004",
+  "operationType": "DEPLOY",
+  "currentState": "FAILED",
+  "customerIdHash": "d4e5f678901234567890123456789012345678901234567890123456789012cd",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "pipelineId": "pipeline-fixture-002",
+  "stepId": "step-deploy-fixture-004",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 2,
+  "diagnostic": {
+    "safeSummary": "Deployment failed: org connection refused after 3 attempts",
+    "errorCode": "SFDC_CONNECT_FAILED"
+  }
+}

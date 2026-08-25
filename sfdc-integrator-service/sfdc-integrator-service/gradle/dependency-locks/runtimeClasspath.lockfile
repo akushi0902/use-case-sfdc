@@ -1,0 +1,20 @@
+# This is a Gradle generated file for dependency locking.
+# Manual edits can break the build and are not advised.
+# This file is expected to be part of source control.
+# To regenerate with resolved checksums, run:
+#   ./gradlew dependencies --write-locks
+com.hazelcast:hazelcast:5.4.0=runtimeClasspath
+com.hazelcast:hazelcast-spring:5.4.0=runtimeClasspath
+com.opsera:java-core-library:1.0.0=runtimeClasspath
+com.opsera:java-jobengine-library:1.0.0=runtimeClasspath
+com.opsera:kubernetes-client:1.0.0=runtimeClasspath
+com.opsera.salesforce:salesforce-core-lib:1.0.0=runtimeClasspath
+org.flywaydb:flyway-core:10.20.1=runtimeClasspath
+org.flywaydb:flyway-database-postgresql:10.20.1=runtimeClasspath
+org.postgresql:postgresql:42.7.4=runtimeClasspath
+org.springframework.boot:spring-boot-starter-actuator:3.4.1=runtimeClasspath
+org.springframework.boot:spring-boot-starter-jdbc:3.4.1=runtimeClasspath
+org.springframework.boot:spring-boot-starter-validation:3.4.1=runtimeClasspath
+org.springframework.boot:spring-boot-starter-web:3.4.1=runtimeClasspath
+org.springframework.kafka:spring-kafka:3.3.1=runtimeClasspath
+empty=

@@ -1,0 +1,9 @@
+{
+  "_comment": "Fixture: valid v2 validate submission. Expects HTTP 202 with AcceptedAcknowledgement (operationType=VALIDATE).",
+  "operationType": "VALIDATE",
+  "customerId": "customer-fixture-001",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "taskId": "step-validate-fixture-001",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-validate-fixture-001"
+}

@@ -1,0 +1,5 @@
+{
+  "_comment": "CHAR-005 — post-refresh task request; synthetic IDs only, no real Salesforce org data",
+  "pipelineId": "char-pipeline-004",
+  "stepId": "char-step-004"
+}

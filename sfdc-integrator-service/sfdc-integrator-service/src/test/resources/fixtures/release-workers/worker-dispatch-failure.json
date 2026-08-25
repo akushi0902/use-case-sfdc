@@ -1,0 +1,13 @@
+{
+  "_comment": "Worker dispatch failure scenario fixture (WO-152 AC-4)",
+  "operationType": "QUICK_DEPLOY",
+  "correlationId": "corr-failure-worker-001",
+  "pipelineId": "pipeline-worker-failure-001",
+  "stepId": "step-worker-failure-001",
+  "sfdcToolId": "sfdc-tool-worker-fail-001",
+  "deploymentRequestId": "deploy-req-worker-failure-001",
+  "dataClassification": "CONFIDENTIAL",
+  "expectedOutcome": "WORKER_UNAVAILABLE",
+  "expectedExceptionType": "CommandDispatchException",
+  "_note": "Used to verify that worker adapter failures produce safe error summaries with correlationId"
+}

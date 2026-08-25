@@ -1,0 +1,4 @@
+{
+  "_comment": "Cancellation request for an active quick deploy job",
+  "safeReason": "Cancelling stale quick deploy — superseded by newer build"
+}

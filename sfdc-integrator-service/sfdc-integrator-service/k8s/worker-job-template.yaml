@@ -1,0 +1,128 @@
+# worker-job-template.yaml
+#
+# Kubernetes Job template for SFDC Integrator worker pods.
+#
+# Variables to replace before applying (use sed or a templating tool):
+#   ${WORKER_NAMESPACE}  — target namespace (e.g. sfdc-integrator-dev)
+#   ${WORKER_IMAGE}      — fully-qualified worker image reference (e.g. registry/sfdc-worker:1.2.3)
+#   ${ENVIRONMENT}       — environment label (dev | test | prod)
+#   ${COST_CENTER}       — cost allocation tag (e.g. engineering-ops, replace-with-your-team)
+#   ${JOB_NAME}          — unique job identifier (injected at runtime by the dispatcher)
+#
+# Resource values are initial conservative defaults pending load-test data.
+# Review and tune before production launch:
+#   cpu request:       250m  — 25% of a single vCPU; sufficient for Salesforce CLI invocation
+#   cpu limit:         1000m — cap at 1 vCPU to prevent job starvation of API pods
+#   memory request:    512Mi — CLI + JVM overhead
+#   memory limit:      1Gi   — hard cap; OOMKill triggers job retry via restartPolicy
+#   ephemeral-storage: 512Mi — workspace for CLI artifacts; long-running jobs need more
+#
+# Security context:
+#   runAsNonRoot: true         — enforced; pod will fail to start if image runs as root
+#   runAsUser: 1000            — matches the 'worker' user in Dockerfile.worker
+#   allowPrivilegeEscalation: false — prevents setuid / sudo escalation
+#   readOnlyRootFilesystem: true   — reduces attack surface; mount writable volumes explicitly
+#   seccompProfile: RuntimeDefault — applies default seccomp filtering
+#
+# Restart policy:
+#   OnFailure — job retries on process failure; backoffLimit controls max retries
+#   Never would require external retry logic; use OnFailure unless dispatcher handles retries
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${JOB_NAME}
+  namespace: ${WORKER_NAMESPACE}
+  labels:
+    app: sfdc-integrator-service
+    component: worker
+    workload: release-worker
+    environment: ${ENVIRONMENT}
+    cost-center: ${COST_CENTER}
+    managed-by: sfdc-deploy-scripts
+  annotations:
+    description: "SFDC Integrator worker job — executes a single Salesforce release operation"
+spec:
+  # Maximum retries before the Job is marked Failed.
+  # Initial value: 3. Tune based on observed transient failure rates.
+  backoffLimit: 3
+  # Wall-clock deadline for the entire Job. Prevents runaway Salesforce CLI invocations.
+  # Initial value: 30 minutes. Adjust after load testing confirms P99 job duration.
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        app: sfdc-integrator-service
+        component: worker
+        workload: release-worker
+        environment: ${ENVIRONMENT}
+        cost-center: ${COST_CENTER}
+    spec:
+      # Use the least-privilege worker service account — NOT the API service account.
+      serviceAccountName: sfdc-worker
+      # Explicitly mount the service account token only when RBAC access is required.
+      automountServiceAccountToken: true
+      restartPolicy: OnFailure
+      # Pod-level security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: sfdc-worker
+          image: ${WORKER_IMAGE}
+          imagePullPolicy: IfNotPresent
+          # Container-level security context — overrides pod-level where specified
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+              ephemeral-storage: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+              ephemeral-storage: "512Mi"
+          # Environment variables — inject from Kubernetes Secrets, never hardcode values
+          env:
+            - name: SFDC_ENV
+              value: "${ENVIRONMENT}"
+            - name: WORKER_JOB_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          # Liveness: not configured for short-lived Jobs (liveness is for long-running Deployments)
+          # Readiness: not applicable to batch Jobs
+          # Writable volume mounts — required because root filesystem is read-only
+          volumeMounts:
+            - name: tmp-workspace
+              mountPath: /tmp
+            - name: worker-logs
+              mountPath: /var/log/sfdc-worker
+      volumes:
+        # Writable ephemeral scratch space for CLI artifacts.
+        # Bounded by the ephemeral-storage limit above.
+        - name: tmp-workspace
+          emptyDir:
+            sizeLimit: 256Mi
+        # Writable log directory for structured worker output.
+        - name: worker-logs
+          emptyDir:
+            sizeLimit: 128Mi
+      # Prefer scheduling on nodes dedicated to batch workloads (optional).
+      # Remove or adjust if your cluster does not use dedicated batch node pools.
+      # tolerations:
+      #   - key: "workload"
+      #     operator: "Equal"
+      #     value: "batch"
+      #     effect: "NoSchedule"

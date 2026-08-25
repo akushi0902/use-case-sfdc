@@ -1,0 +1,8 @@
+{
+  "_comment": "Synthetic JWT claims fixture illustrating whitespace-padded scope edge case — CallerContext splits on \\s+ so values are trimmed",
+  "sub": "fixture-subject-006",
+  "client_id": "fixture-client-006",
+  "iss": "https://idp.fixture.example.internal/",
+  "aud": ["sfdc-integrator"],
+  "scope": "  quickdeploy.submit  "
+}

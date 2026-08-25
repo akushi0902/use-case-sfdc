@@ -1,0 +1,10 @@
+{
+  "_comment": "Sanitized fixture for cached org health response. No real org IDs, customer names, or tenant data.",
+  "customerId": "cust-fixture-oh-compat-001",
+  "toolId": "tool-fixture-oh-compat-001",
+  "orgId": "00Dfixture0000000001",
+  "apiVersion": "58.0",
+  "overallStatus": "HEALTHY",
+  "healthScore": 85,
+  "collectedAt": "2024-01-15T10:00:00Z"
+}

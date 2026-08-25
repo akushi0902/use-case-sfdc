@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic fixture: intermediate progress checkpoint — no state transition, checkpoint record only",
+  "jobId": "job-checkpoint-fixture-001",
+  "correlationId": "corr-checkpoint-fixture-001",
+  "checkpointCode": "DEPLOY_STEP_COMPLETE",
+  "statusCategory": "PROGRESS",
+  "sequenceNumber": 2,
+  "eventTimestamp": "2024-01-01T10:01:00.000Z",
+  "safeMessage": "Deploy step 1 of 3 completed successfully",
+  "messageId": "msg-checkpoint-fixture-progress-001",
+  "safeReasonCode": null
+}

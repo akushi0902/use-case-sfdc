@@ -1,0 +1,7 @@
+{
+  "_comment": "Fixture: v2 cancel submission. Currently not delegated to a legacy execution path. Expects HTTP 422 UNSUPPORTED_OPERATION from SfdcExceptionHandler.",
+  "operationType": "CANCEL",
+  "customerId": "customer-fixture-001",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "taskId": "step-cancel-fixture-001"
+}

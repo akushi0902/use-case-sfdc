@@ -1,0 +1,7 @@
+{
+  "_comment": "Sanitized fixture for SOQL validation compatibility test. Uses example.internal placeholder URLs only.",
+  "pipelineId": "pipeline-fixture-soql-compat-001",
+  "stepId": "step-fixture-soql-compat-001",
+  "sourceOrgUrl": "https://source.fixture.example.internal",
+  "targetOrgUrl": "https://target.fixture.example.internal"
+}

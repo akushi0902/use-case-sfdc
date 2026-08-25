@@ -1,0 +1,9 @@
+{
+  "_comment": "Sanitized fixture for a v2 status reference response during a RUNNING release job.",
+  "jobId": "job-example-00000000-0000-0000-0000-000000000001",
+  "correlationId": "corr-example-00000000-0000-0000-0000-000000000001",
+  "state": "RUNNING",
+  "operationType": "DEPLOY",
+  "lastUpdatedAt": "2024-01-01T00:01:00.000Z",
+  "statusMessage": "Release pipeline execution in progress"
+}

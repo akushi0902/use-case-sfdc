@@ -1,0 +1,11 @@
+{
+  "_comment": "Retention metadata for a job under legal hold — must NEVER be purged even if retention has expired",
+  "jobRef": "job-purge-legal-hold-001",
+  "retentionCategory": "EXTENDED",
+  "classification": "RESTRICTED",
+  "retentionStart": "2020-01-01T00:00:00Z",
+  "retentionExpiration": "2021-01-01T00:00:00Z",
+  "legalHold": true,
+  "purgeEligibilityStatus": "LEGAL_HOLD",
+  "purgedAt": null
+}

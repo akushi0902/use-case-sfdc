@@ -1,0 +1,6 @@
+{
+  "_comment": "Invalid quick deploy start request: deploymentRequestId is absent. Controller must reject with 400 BEFORE calling QuickDeployService.start().",
+  "pipelineId": "pipeline-compat-003",
+  "stepId": "step-compat-qdeploy-03",
+  "fallbackTaskId": "fallback-task-compat-003"
+}

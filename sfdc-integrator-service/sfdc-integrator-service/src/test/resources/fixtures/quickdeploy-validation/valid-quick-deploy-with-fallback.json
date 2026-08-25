@@ -1,0 +1,7 @@
+{
+  "_comment": "WO-121 fixture: valid quick deploy request with fallbackTaskId present. Validates that the controller preserves the provided fallbackTaskId and delegates to the service exactly once.",
+  "deploymentRequestId": "deploy-req-val-001",
+  "pipelineId": "pipeline-val-001",
+  "stepId": "step-val-qdeploy-01",
+  "fallbackTaskId": "fallback-task-val-001"
+}

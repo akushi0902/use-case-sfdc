@@ -1,0 +1,12 @@
+{
+  "_comment": "Sanitized fixture for a v2 DEPLOY release command. No real credentials, tokens, or Salesforce org URLs.",
+  "operationType": "DEPLOY",
+  "customerId": "customer-example-001",
+  "sfdcToolId": "sfdc-tool-example-001",
+  "taskId": "step-deploy-001",
+  "pipelineId": "pipeline-example-001",
+  "stepId": "step-deploy-001",
+  "deployRequestId": null,
+  "requestedBy": "<omitted-in-fixture>",
+  "clientCorrelationId": "client-cid-deploy-001"
+}

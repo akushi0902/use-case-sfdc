@@ -1,0 +1,21 @@
+{
+  "_comment": "Expected health indicator component names as registered in the actuator (Spring Boot strips the 'HealthIndicator' suffix). Used for actuator endpoint integration test assertions.",
+  "healthGroupReadiness": {
+    "expectedComponents": [
+      "kafkaConnectivity",
+      "hazelcastCluster",
+      "jobDispatchReadiness",
+      "db"
+    ]
+  },
+  "healthGroupLiveness": {
+    "expectedComponents": [
+      "livenessState"
+    ]
+  },
+  "indicatorBehaviourTestProfile": {
+    "kafkaConnectivity": "UNKNOWN (bootstrap-servers not configured in test profile)",
+    "hazelcastCluster": "UNKNOWN (HazelcastAutoConfiguration excluded in test profile)",
+    "jobDispatchReadiness": "UP with mode=legacy-only (worker-dispatch disabled by default)"
+  }
+}

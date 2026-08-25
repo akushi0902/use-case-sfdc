@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic fixture: checkpoint event indicating execution completed successfully",
+  "jobId": "job-checkpoint-fixture-001",
+  "correlationId": "corr-checkpoint-fixture-001",
+  "checkpointCode": "EXECUTION_COMPLETED",
+  "statusCategory": "COMPLETED",
+  "sequenceNumber": 3,
+  "eventTimestamp": "2024-01-01T10:05:00.000Z",
+  "safeMessage": "All deploy steps completed — release operation finished",
+  "messageId": "msg-checkpoint-fixture-completed-001",
+  "safeReasonCode": null
+}

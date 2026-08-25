@@ -1,0 +1,21 @@
+{
+  "_comment": "Fixture: job in CANCELLED terminal state. Cancelled by operator before worker dispatch.",
+  "jobId": "job-fixture-cancelled-005",
+  "correlationId": "cid-fixture-cancelled-005",
+  "operationType": "QUICK_DEPLOY",
+  "currentState": "CANCELLED",
+  "customerIdHash": "e5f678901234567890123456789012345678901234567890123456789012de01",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-fixture-005",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 1,
+  "checkpoints": [
+    {
+      "sequenceNumber": 1,
+      "checkpointCode": "CANCELLED_BY_OPERATOR",
+      "stateAtCheckpoint": "CANCELLED",
+      "safeMessage": "Job cancelled before worker dispatch"
+    }
+  ]
+}

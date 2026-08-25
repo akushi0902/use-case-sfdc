@@ -1,0 +1,4 @@
+{
+  "_comment": "Fixture: invalid v2 submission — operationType, customerId, sfdcToolId, and taskId all absent. Expects HTTP 400 VALIDATION_FAILED with fieldErrors listing all missing required fields.",
+  "pipelineId": "pipeline-fixture-001"
+}

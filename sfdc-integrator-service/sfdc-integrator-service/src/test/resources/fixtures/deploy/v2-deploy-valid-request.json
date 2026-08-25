@@ -1,0 +1,11 @@
+{
+  "_comment": "Minimal valid deployment submission with source control and package context",
+  "customerId": "customer-fixture-001",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "taskId": "step-deploy-fixture-001",
+  "repositoryId": "repo-fixture-001",
+  "branch": "main",
+  "packageId": "package-fixture-001",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-deploy-fixture-001"
+}

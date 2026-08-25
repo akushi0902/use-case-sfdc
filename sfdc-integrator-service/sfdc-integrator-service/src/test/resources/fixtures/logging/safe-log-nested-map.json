@@ -1,0 +1,13 @@
+{
+  "_comment": "Fixture: represents a request with nested structures. SafeStructuredLogger must not recurse into nested maps — only explicit allow-listed top-level fields are emitted.",
+  "operation": "data-migration",
+  "controller": "DataMigrationController",
+  "outcome": "ACCEPTED",
+  "pipelineId": "pipeline-dm-safe-001",
+  "stepId": "step-dm-safe-01",
+  "nestedObject": {
+    "sensitiveKey": "value-that-must-not-be-logged",
+    "anotherToken": "another-secret"
+  },
+  "listField": ["item1", "item2"]
+}

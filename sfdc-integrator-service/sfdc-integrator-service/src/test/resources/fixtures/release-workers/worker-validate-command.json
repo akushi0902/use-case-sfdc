@@ -1,0 +1,13 @@
+{
+  "_comment": "Worker dispatch command fixture for VALIDATE operation (WO-152)",
+  "operationType": "VALIDATE",
+  "correlationId": "corr-validate-worker-001",
+  "idempotencyKey": "idempotency-validate-worker-001",
+  "pipelineId": "pipeline-worker-validate-001",
+  "stepId": "step-worker-validate-001",
+  "sfdcToolId": "sfdc-tool-worker-002",
+  "deploymentRequestId": "deploy-req-worker-validate-001",
+  "dataClassification": "CONFIDENTIAL",
+  "expectedRoutedTo": "worker",
+  "expectedLegacyService": "SfdcIntegratorService.validate"
+}

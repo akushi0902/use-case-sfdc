@@ -1,0 +1,13 @@
+{
+  "_comment": "Sanitized fixture for data migration classification tests. Uses example.internal placeholder URLs only.",
+  "pipelineId": "pipeline-fixture-dm-001",
+  "stepId": "step-dm-fixture-001",
+  "sourceOrgUrl": "https://source.example.internal",
+  "targetOrgUrl": "https://target.example.internal",
+  "_governance": {
+    "expectedCategory": "SFDC_ARTIFACT",
+    "expectedClassification": "RESTRICTED",
+    "expectedRetentionHint": "EXTENDED",
+    "operation": "data-migration"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "_comment": "CHAR-002 — quick deploy with no fallbackTaskId; controller normalizes to empty string",
+  "deploymentRequestId": "char-deploy-req-002",
+  "pipelineId": "char-pipeline-002",
+  "stepId": "char-step-002"
+}

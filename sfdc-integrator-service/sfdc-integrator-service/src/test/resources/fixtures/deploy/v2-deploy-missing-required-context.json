@@ -1,0 +1,7 @@
+{
+  "_comment": "Missing required customerId — should be rejected with HTTP 400",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "taskId": "step-deploy-fixture-001",
+  "repositoryId": "repo-fixture-001",
+  "branch": "main"
+}

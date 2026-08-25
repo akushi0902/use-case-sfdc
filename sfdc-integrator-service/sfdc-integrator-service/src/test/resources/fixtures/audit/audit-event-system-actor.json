@@ -1,0 +1,19 @@
+{
+  "_comment": "Fixture: audit event with SYSTEM actor type. Used for internal lifecycle mutations where no external caller context is available (e.g. Kafka listener processing, internal retry). The actorRef falls back to the correlation ID rather than a pipeline or user identifier.",
+  "eventId": "audit-fixture-system-actor-001",
+  "correlationId": "cid-fixture-system-001",
+  "actorType": "SYSTEM",
+  "actorRef": "cid-fixture-system-001",
+  "resourceType": "LIFECYCLE_JOB",
+  "resourceRef": "job-fixture-system-001",
+  "operation": "JOB_LIFECYCLE_TRANSITION",
+  "classification": "CONFIDENTIAL",
+  "safeMetadata": "{\"jobId\":\"job-fixture-system-001\",\"fromState\":\"DISPATCHING\",\"toState\":\"RUNNING\",\"operationType\":\"DEPLOY\"}",
+  "eventTimestamp": "2024-01-01T10:05:00Z",
+  "requestSource": "JobLifecycleService.transition",
+  "retentionExpiryAt": "2025-01-01T10:05:00Z",
+  "_notes": {
+    "actorFallback": "When actor context is unavailable for internal or Kafka-triggered processing, actorRef is set to the correlationId. This is safe — correlationId is opaque and contains no raw PII.",
+    "systemActorType": "SYSTEM actor type is used instead of APPLICATION for internal service mutations to distinguish self-initiated transitions from API-driven ones."
+  }
+}

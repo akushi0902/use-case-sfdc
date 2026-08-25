@@ -1,0 +1,29 @@
+{
+  "_comment": "Synthetic fixture: job failed with safe diagnostic summary. No raw stack traces or CLI output.",
+  "jobId": "job-status-fixture-failed-001",
+  "correlationId": "corr-status-fixture-failed-001",
+  "operationType": "DEPLOY",
+  "state": "FAILED",
+  "acceptedAt": "2024-01-01T10:00:00.000Z",
+  "updatedAt": "2024-01-01T10:03:00.000Z",
+  "checkpoints": [
+    {
+      "sequenceNumber": 1,
+      "checkpointCode": "WORKER_STARTED",
+      "stateAtCheckpoint": "RUNNING",
+      "safeMessage": "Worker pod started execution",
+      "recordedAt": "2024-01-01T10:00:05.000Z"
+    },
+    {
+      "sequenceNumber": 2,
+      "checkpointCode": "EXECUTION_FAILED",
+      "stateAtCheckpoint": "FAILED",
+      "safeMessage": "Deployment failed: package version mismatch",
+      "recordedAt": "2024-01-01T10:03:00.000Z"
+    }
+  ],
+  "safeDiagnosticSummary": "Deployment failed: package version mismatch",
+  "resultReference": null,
+  "safeWarnings": [],
+  "statusSource": "DURABLE_LIFECYCLE"
+}

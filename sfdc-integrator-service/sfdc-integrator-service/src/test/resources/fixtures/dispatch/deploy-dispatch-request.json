@@ -1,0 +1,14 @@
+{
+  "_comment": "Representative deploy dispatch request fixture. All identifiers are placeholders — no real credentials, org URLs, or customer data.",
+  "commandType": "DEPLOY",
+  "correlationId": "corr-fixture-deploy-001",
+  "idempotencyKey": "idempotency-deploy-fixture-001",
+  "pipelineId": "pipeline-fixture-002",
+  "stepId": "step-deploy-fixture-001",
+  "customerId": "customer-fixture-002",
+  "sfdcToolId": "sfdc-tool-fixture-002",
+  "deploymentRequestId": "",
+  "fallbackTaskId": "",
+  "timeoutSeconds": 1800,
+  "safeMetadata": "{\"commandType\":\"DEPLOY\",\"pipelineId\":\"pipeline-fixture-002\"}"
+}

@@ -1,0 +1,23 @@
+{
+  "_comment": "Synthetic fixture: worker self-test command payload — no real credentials, no external dependencies.",
+  "_comment2": "Use with: docker run --rm sfdc-worker:dev self-test (or entrypoint.sh self-test)",
+  "commandMode": "self-test",
+  "correlationId": "corr-worker-fixture-selftest-001",
+  "jobId": "job-worker-fixture-selftest-001",
+  "customerId": "pipeline-fixture-customer-001",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-fixture-001",
+  "expectedScripts": [
+    "deploy.sh",
+    "validate.sh",
+    "quick-deploy.sh",
+    "rollback.sh",
+    "package.sh",
+    "diagnostic.sh"
+  ],
+  "expectedExitCode": 0,
+  "expectedOutputContains": [
+    "mode=self-test",
+    "status=PASSED"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "_comment": "WO-122 injection fixture: fallbackTaskId contains a newline injection attempt. Newline \\n is represented here as a literal backslash-n; actual test uses the Java string with \\n char. Should be rejected.",
+  "deploymentRequestId": "deploy-req-safe-004",
+  "pipelineId": "pipeline-safe-004",
+  "stepId": "step-safe-004",
+  "fallbackTaskId": "fallback-safe-004\\necho injected"
+}

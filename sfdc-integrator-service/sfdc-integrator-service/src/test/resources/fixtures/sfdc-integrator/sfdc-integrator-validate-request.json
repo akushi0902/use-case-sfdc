@@ -1,0 +1,6 @@
+{
+  "_comment": "Synthetic validate request fixture for SfdcIntegratorController compatibility tests. Uses same DeployRequest DTO as deploy; no real org URLs, credentials, or customer identifiers.",
+  "pipelineId": "pipeline-compat-sfdc-002",
+  "stepId": "step-compat-validate-001",
+  "orgUrl": "https://org-validate.example.internal"
+}

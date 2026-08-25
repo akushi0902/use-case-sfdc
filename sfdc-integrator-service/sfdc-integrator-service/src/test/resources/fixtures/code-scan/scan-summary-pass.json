@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic scan summary fixture for a passing scan — no real scan results or customer repository data",
+  "scanId": "scan-fixture-pass-001",
+  "pipelineId": "pipeline-fixture-cs-compat-001",
+  "totalViolations": 2,
+  "criticalCount": 0,
+  "highCount": 1,
+  "mediumCount": 1,
+  "lowCount": 0,
+  "status": "PASS",
+  "scannedAt": "2024-01-15T10:00:00Z"
+}

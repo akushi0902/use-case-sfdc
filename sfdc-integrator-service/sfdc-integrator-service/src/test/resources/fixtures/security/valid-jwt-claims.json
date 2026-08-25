@@ -1,0 +1,10 @@
+{
+  "_comment": "Representative valid JWT claims map for CallerContextResolver tests. No real signing keys, secrets, or production identity provider values.",
+  "sub": "test-caller-subject-001",
+  "client_id": "sfdc-test-client-001",
+  "scope": "quick-deploy read",
+  "iss": "https://idp.example.internal",
+  "aud": ["sfdc-integrator"],
+  "exp": 9999999999,
+  "iat": 1700000000
+}

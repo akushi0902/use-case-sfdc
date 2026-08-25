@@ -1,0 +1,10 @@
+{
+  "_comment": "Synthetic fixture: malformed checkpoint event missing required jobId field — should be skipped with a safe log warning",
+  "checkpointCode": "WORKER_STARTED",
+  "statusCategory": "RUNNING",
+  "sequenceNumber": 1,
+  "eventTimestamp": "2024-01-01T14:00:00.000Z",
+  "safeMessage": "Worker started but job reference is missing",
+  "messageId": "msg-checkpoint-fixture-malformed-001",
+  "safeReasonCode": null
+}

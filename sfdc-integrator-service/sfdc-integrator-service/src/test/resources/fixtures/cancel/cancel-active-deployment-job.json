@@ -1,0 +1,4 @@
+{
+  "_comment": "Cancellation request for an active deployment job",
+  "safeReason": "Cancelling deployment — environment no longer available"
+}

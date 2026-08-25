@@ -1,0 +1,20 @@
+{
+  "_comment": "Fixture: completed DEPLOY job — rollback not eligible, not recommended",
+  "jobId": "rd-fixture-completed-001",
+  "correlationId": "corr-rd-completed-001",
+  "operationType": "DEPLOY",
+  "currentState": "COMPLETED",
+  "checkpoints": [
+    {"sequenceNumber": 1, "checkpointCode": "PRE_VALIDATE_OK",     "stateAtCheckpoint": "RUNNING", "safeMessage": "Pre-validation passed"},
+    {"sequenceNumber": 2, "checkpointCode": "DEPLOY_APPLY_START",  "stateAtCheckpoint": "RUNNING", "safeMessage": "Deployment apply started"},
+    {"sequenceNumber": 3, "checkpointCode": "DEPLOY_APPLY_DONE",   "stateAtCheckpoint": "RUNNING", "safeMessage": "Deployment apply completed"},
+    {"sequenceNumber": 4, "checkpointCode": "POST_DEPLOY_VERIFY",  "stateAtCheckpoint": "COMPLETED", "safeMessage": "Post-deployment verification passed"}
+  ],
+  "expectedRollbackDecision": {
+    "rollbackEligible": false,
+    "rollbackRecommended": false,
+    "rollbackReasonCode": "COMPLETED_SUCCESSFULLY",
+    "failedStage": null,
+    "lastSuccessfulCheckpoint": "POST_DEPLOY_VERIFY"
+  }
+}

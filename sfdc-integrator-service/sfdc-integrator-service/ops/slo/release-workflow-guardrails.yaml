@@ -1,0 +1,244 @@
+# Release Workflow SLO Guardrails — SFDC Integrator Service
+#
+# Source of truth for dashboard panels, alert thresholds, and rollout gates.
+# Do not duplicate these values — import or reference this file from your
+# alerting and dashboard tooling.
+#
+# For full SLI definitions, measurement intent, escalation guidance, and
+# implementation status see:
+#   docs/operations/release-workflow-slos.md
+#
+# Schema notes:
+#   threshold.value  — numeric alert threshold
+#   threshold.unit   — unit of the value (ms, seconds, percent, minutes, hours)
+#   threshold.type   — "upper" means alert when metric EXCEEDS value;
+#                      "lower" means alert when metric FALLS BELOW value
+#   severity         — critical | warning | info
+#   status           — active (measurable now) | pending (awaits implementation)
+#   owner            — suggested team to page / notify
+
+version: "1.0"
+service: sfdc-integrator-service
+scope: release-workflows
+workflows:
+  - quick-deploy      # POST /quickdeploy
+  - deploy            # POST /deploy
+  - validate          # POST /validate
+  - status-tracking   # GET /status/:jobId (route not yet implemented)
+
+guardrails:
+
+  # ── Acceptance Layer Latency ──────────────────────────────────────────────
+
+  - id: slo-01-api-acceptance-latency-p95
+    sli: SLI-01
+    description: >
+      p95 request acceptance latency for quick-deploy, deploy, and validate
+      routes. Measured from DispatcherServlet entry to HTTP response commit.
+      Excludes async Kafka dispatch and background execution time.
+    threshold:
+      value: 2000
+      unit: ms
+      percentile: 95
+      window: 5m
+      type: upper
+    severity: critical
+    status: active
+    owner: sre-release-ops
+    metric_hint: "http.server.requests{uri=~'/quickdeploy|/deploy|/validate',outcome='SUCCESS'}"
+    notes: >
+      Production baseline pending. Alert fires when p95 exceeds 2 000 ms
+      over a 5-minute rolling window. See SLO-01.
+
+  # ── Status Lookup Latency ─────────────────────────────────────────────────
+
+  - id: slo-02-status-lookup-latency-p95
+    sli: SLI-02
+    description: >
+      p95 latency for job status query route. Hot path served from Hazelcast
+      cache; cold path falls through to PostgreSQL.
+    threshold:
+      value: 1000
+      unit: ms
+      percentile: 95
+      window: 5m
+      type: upper
+    severity: critical
+    status: pending
+    owner: sre-release-ops
+    metric_hint: "http.server.requests{uri=~'/status/.*',outcome='SUCCESS'}"
+    notes: >
+      Status route not yet implemented. Activate this guardrail when the
+      status-tracking endpoint ships. Production baseline pending.
+
+  # ── Job Final-Status Coverage ─────────────────────────────────────────────
+
+  - id: slo-03-final-status-coverage
+    sli: SLI-03
+    description: >
+      Fraction of accepted jobs that reach a terminal lifecycle state
+      (SUCCEEDED, FAILED, CANCELLED) within the measurement window.
+    threshold:
+      value: 99
+      unit: percent
+      window: 1h
+      type: lower
+    severity: critical
+    status: pending
+    owner: sre-release-ops
+    metric_hint: "sfdc_job_terminal_count / sfdc_job_accepted_count"
+    notes: >
+      Requires durable job lifecycle persistence (PostgreSQL model not yet
+      implemented). Activate when lifecycle persistence ships.
+
+  # ── Checkpoint Freshness ──────────────────────────────────────────────────
+
+  - id: slo-04-checkpoint-freshness
+    sli: SLI-04
+    description: >
+      Maximum allowed age of the most recent lifecycle checkpoint for any
+      actively-running job. Alerts when any active job checkpoint exceeds
+      this staleness threshold.
+    threshold:
+      value: 60
+      unit: seconds
+      type: upper
+    severity: critical
+    status: pending
+    owner: sre-release-ops
+    metric_hint: "max(time() - sfdc_job_checkpoint_timestamp) by (job_id)"
+    notes: >
+      Requires Kafka progress messaging and checkpoint persistence.
+      Not a rate — alert directly on staleness crossing threshold.
+
+  # ── Server-Side Error Rate ────────────────────────────────────────────────
+
+  - id: slo-05-server-error-rate
+    sli: SLI-05
+    description: >
+      Fraction of release workflow requests that result in HTTP 5xx responses.
+      Measured across quick-deploy, deploy, and validate routes.
+    threshold:
+      value: 1
+      unit: percent
+      window: 5m
+      type: upper
+    severity: critical
+    status: active
+    owner: sre-release-ops
+    metric_hint: "http.server.requests{uri=~'/quickdeploy|/deploy|/validate',outcome='SERVER_ERROR'}"
+    burn_rate:
+      page_multiplier: 14.4
+      page_window: 1h
+      description: >
+        Page at 14.4x burn rate over a 1-hour window to surface exhaustion
+        of a 24-hour error budget 2 hours early.
+    notes: >
+      Production baseline pending. Freeze deployments when error rate
+      exceeds 0.5% for two consecutive windows.
+
+  # ── Legacy Compatibility ──────────────────────────────────────────────────
+
+  - id: slo-06-legacy-compatibility
+    sli: SLI-06
+    description: >
+      Fraction of requests to current legacy routes that return a response
+      conforming to the characterised legacy contract (200 OK body "SUCCESS"
+      for well-formed requests; 400 for malformed requests). Measured during
+      the coexistence period while v2 endpoints are being introduced.
+    threshold:
+      value: 99.9
+      unit: percent
+      window: 1h
+      type: lower
+    severity: warning
+    status: active
+    owner: release-engineering
+    metric_hint: "canary_probe_legacy_contract_conformant_ratio"
+    notes: >
+      Coexistence period only. Retire this guardrail once legacy routes are
+      decommissioned and all callers have migrated to v2 endpoints.
+
+  # ── Sensitive-Data Logging ────────────────────────────────────────────────
+
+  - id: slo-07-sensitive-data-logging-triage
+    sli: SLI-07
+    description: >
+      Maximum time from a sensitive-data logging alert firing to a confirmed
+      triage outcome. Guards against raw request payloads, customer
+      identifiers, credential fragments, or authorization header values
+      appearing in service logs.
+    threshold:
+      value: 30
+      unit: minutes
+      type: upper
+    severity: critical
+    status: active
+    owner: security-sre
+    metric_hint: "alert_acknowledgement_duration_minutes{alert='sensitive-data-log-pattern'}"
+    notes: >
+      Alert on log pattern match. Post-mortem required within 3 business
+      days of any confirmed incident.
+
+  # ── Recovery Targets ──────────────────────────────────────────────────────
+
+  - id: slo-08-recovery-rpo
+    sli: SLI-08
+    description: >
+      Recovery Point Objective. Maximum acceptable data loss window for
+      release-critical job state in the event of a production incident
+      requiring restore from backup.
+    threshold:
+      value: 15
+      unit: minutes
+      type: upper
+    severity: critical
+    status: pending
+    owner: sre-release-ops
+    metric_hint: "backup_age_minutes{target='sfdc-integrator-db'}"
+    notes: >
+      Target is production intent. Requires durable PostgreSQL backup with
+      point-in-time recovery (PITR) configured. Activate when PITR is
+      confirmed operational.
+
+  - id: slo-09-recovery-rto
+    sli: SLI-09
+    description: >
+      Recovery Time Objective. Maximum acceptable time from incident
+      declaration to restored service availability for release-critical
+      workflows.
+    threshold:
+      value: 4
+      unit: hours
+      type: upper
+    severity: critical
+    status: pending
+    owner: sre-release-ops
+    metric_hint: "incident_recovery_duration_hours{service='sfdc-integrator-service'}"
+    notes: >
+      Target is production intent. Validate against actual recovery runbook
+      timing once full stack is deployed to production.
+
+# ── Rollout Gate Thresholds ────────────────────────────────────────────────
+#
+# These values are referenced by CI/CD rollout gate conditions. A deployment
+# must hold the service within these bounds during canary evaluation before
+# it is promoted to the next environment.
+
+rollout_gates:
+  canary_evaluation_window: 15m
+  gates:
+    - id: gate-acceptance-latency
+      guardrail_ref: slo-01-api-acceptance-latency-p95
+      pass_condition: "p95_acceptance_latency_ms < 2000"
+      on_failure: rollback
+
+    - id: gate-error-rate
+      guardrail_ref: slo-05-server-error-rate
+      pass_condition: "server_error_rate_percent < 1"
+      on_failure: rollback
+
+    - id: gate-legacy-compatibility
+      guardrail_ref: slo-06-legacy-compatibility
+      pass_condition: "legacy_conformant_ratio_percent >= 99.9"
+      on_failure: rollback

@@ -1,0 +1,19 @@
+{
+  "_comment": "Fixture: DEPLOY job failed during deployment apply — rollback eligible and recommended",
+  "jobId": "rd-fixture-failed-deploy-001",
+  "correlationId": "corr-rd-failed-deploy-001",
+  "operationType": "DEPLOY",
+  "currentState": "FAILED",
+  "checkpoints": [
+    {"sequenceNumber": 1, "checkpointCode": "PRE_VALIDATE_OK",    "stateAtCheckpoint": "RUNNING", "safeMessage": "Pre-validation passed"},
+    {"sequenceNumber": 2, "checkpointCode": "DEPLOY_APPLY_START", "stateAtCheckpoint": "RUNNING", "safeMessage": "Deployment apply started"},
+    {"sequenceNumber": 3, "checkpointCode": "DEPLOY_APPLY_ERROR", "stateAtCheckpoint": "FAILED",  "safeMessage": "Deployment component error — partial changes applied"}
+  ],
+  "expectedRollbackDecision": {
+    "rollbackEligible": true,
+    "rollbackRecommended": true,
+    "rollbackReasonCode": "DEPLOYMENT_PARTIAL_FAILURE",
+    "failedStage": "DEPLOYMENT",
+    "lastSuccessfulCheckpoint": "DEPLOY_APPLY_ERROR"
+  }
+}

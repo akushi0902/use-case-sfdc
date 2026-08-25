@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic fixture: checkpoint event indicating execution failed with a safe reason code",
+  "jobId": "job-checkpoint-fixture-002",
+  "correlationId": "corr-checkpoint-fixture-002",
+  "checkpointCode": "EXECUTION_FAILED",
+  "statusCategory": "FAILED",
+  "sequenceNumber": 2,
+  "eventTimestamp": "2024-01-01T11:00:00.000Z",
+  "safeMessage": "Deploy validation failed — package version mismatch detected",
+  "messageId": "msg-checkpoint-fixture-failed-001",
+  "safeReasonCode": "PACKAGE_VERSION_MISMATCH"
+}

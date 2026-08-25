@@ -1,0 +1,11 @@
+{
+  "_comment": "Sanitized fixture for post-refresh task classification tests. No org credentials or real identifiers.",
+  "pipelineId": "pipeline-fixture-pr-001",
+  "stepId": "step-pr-fixture-001",
+  "_governance": {
+    "expectedCategory": "JOB_METADATA",
+    "expectedClassification": "CONFIDENTIAL",
+    "expectedRetentionHint": "STANDARD",
+    "operation": "post-refresh"
+  }
+}

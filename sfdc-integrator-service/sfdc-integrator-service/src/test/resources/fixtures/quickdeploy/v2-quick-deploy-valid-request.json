@@ -1,0 +1,10 @@
+{
+  "_comment": "Fixture: valid v2 quick deploy submission with all required fields. Used to verify 202 acceptance.",
+  "deployRequestId": "deploy-req-v2-fixture-001",
+  "customerId": "customer-v2-fixture-001",
+  "sfdcToolId": "sfdc-tool-v2-fixture-001",
+  "taskId": "step-v2-qdeploy-fixture-001",
+  "gitTaskId": "fallback-task-v2-fixture-001",
+  "pipelineId": "pipeline-v2-fixture-001",
+  "stepId": "step-v2-fixture-001"
+}

@@ -1,0 +1,8 @@
+{
+  "_comment": "Fixture: safe log event with all optional fields absent/null. Used to verify SafeStructuredLogger degrades safely — logs operation/controller/outcome at minimum.",
+  "operation": "deploy",
+  "controller": "SfdcIntegratorController",
+  "outcome": "ACCEPTED",
+  "pipelineId": null,
+  "stepId": null
+}

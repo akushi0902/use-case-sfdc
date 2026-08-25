@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: malformed XML — unclosed element — produces HARD_FAILURE (MALFORMED_XML) -->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>Admin
+        <name>Profile</name>
+    </types>

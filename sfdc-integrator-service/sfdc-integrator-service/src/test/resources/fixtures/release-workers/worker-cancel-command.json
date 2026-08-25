@@ -1,0 +1,11 @@
+{
+  "_comment": "Worker dispatch command fixture for CANCEL operation (WO-152)",
+  "operationType": "CANCEL",
+  "correlationId": "corr-cancel-worker-001",
+  "pipelineId": "pipeline-worker-cancel-001",
+  "deploymentRequestId": "deploy-req-worker-cancel-001",
+  "dataClassification": "CONFIDENTIAL",
+  "expectedRoutedTo": "worker",
+  "expectedLegacyService": "QuickDeployService.stop",
+  "_note": "CANCEL is only routed to worker when sfdc.worker-dispatch.enabled=true AND command-types.CANCEL=true"
+}

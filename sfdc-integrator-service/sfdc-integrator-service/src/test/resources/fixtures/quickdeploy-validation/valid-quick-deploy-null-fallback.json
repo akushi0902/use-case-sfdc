@@ -1,0 +1,6 @@
+{
+  "_comment": "WO-121 fixture: valid quick deploy request without fallbackTaskId. Controller normalizes the absent field to empty string before delegating to the service — no NullPointerException in downstream code.",
+  "deploymentRequestId": "deploy-req-val-002",
+  "pipelineId": "pipeline-val-002",
+  "stepId": "step-val-qdeploy-02"
+}

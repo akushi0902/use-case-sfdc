@@ -1,0 +1,18 @@
+{
+  "_comment": "Fixture documenting an invalid lifecycle transition attempt. A COMPLETED job (terminal) cannot transition to RUNNING. This is rejected by LifecycleTransitionPolicy with a LifecycleTransitionException.",
+  "scenarioId": "invalid-terminal-reopen",
+  "description": "Late worker arrival attempts to re-open a completed job",
+  "job": {
+    "jobId": "job-fixture-invalid-transition-001",
+    "correlationId": "cid-fixture-invalid-001",
+    "currentState": "COMPLETED",
+    "version": 4
+  },
+  "requestedTransition": {
+    "targetState": "RUNNING",
+    "safeReasonCode": "LATE_WORKER_ARRIVAL"
+  },
+  "expectedOutcome": "REJECTED_BY_POLICY",
+  "expectedExceptionType": "LifecycleTransitionException",
+  "notes": "Terminal states must not be overwritten. The LifecycleTransitionPolicy blocks this transition with 'source state is terminal'."
+}

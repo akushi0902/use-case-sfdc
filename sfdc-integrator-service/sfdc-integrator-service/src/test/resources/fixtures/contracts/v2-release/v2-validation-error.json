@@ -1,0 +1,19 @@
+{
+  "_comment": "Sanitized fixture for a v2 structured validation error response. No stack traces or raw Salesforce payloads.",
+  "errorCode": "VALIDATION_FAILURE",
+  "message": "Request validation failed. Review field errors for details.",
+  "correlationId": "corr-example-00000000-0000-0000-0000-000000000099",
+  "remediationHint": "Ensure all required fields are present and within their allowed size constraints.",
+  "fieldErrors": [
+    {
+      "field": "customerId",
+      "rejectedValue": null,
+      "message": "customerId is required"
+    },
+    {
+      "field": "taskId",
+      "rejectedValue": null,
+      "message": "taskId is required"
+    }
+  ]
+}

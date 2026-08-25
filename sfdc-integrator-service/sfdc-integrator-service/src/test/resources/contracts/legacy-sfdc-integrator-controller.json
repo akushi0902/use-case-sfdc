@@ -1,0 +1,79 @@
+{
+  "contract_version": "1.0",
+  "service": "sfdc-integrator-service",
+  "controller": "SfdcIntegratorController",
+  "characterized_at": "2026-08-25",
+  "purpose": "Endpoint contract map for SfdcIntegratorController legacy routes. Used as a change-safety baseline before modernization of shared validation, logging, async dispatch, or exception handling. Do not modify route behavior without updating this document and the characterization tests.",
+  "routes": [
+    {
+      "id": "SFDC-001",
+      "method": "POST",
+      "path": "/deploy",
+      "handler_method": "deploy",
+      "request_style": "JSON body — DeployRequest",
+      "request_dto": "DeployRequest",
+      "required_fields": [],
+      "optional_fields": ["pipelineId", "stepId", "orgUrl"],
+      "success_status": 200,
+      "success_body": "SUCCESS",
+      "success_content_type": "text/plain",
+      "error_status_malformed_json": 400,
+      "error_body_malformed_json": "Malformed request body",
+      "error_status_service_exception": 500,
+      "error_body_service_exception": "Internal service error",
+      "delegated_service": "SfdcIntegratorService.deploy(DeployRequest)",
+      "delegation_mode": "synchronous acknowledgement — controller returns SUCCESS after delegation call returns",
+      "classification_context": "GovernanceDataCategory.SFDC_ARTIFACT / operation=deploy",
+      "fixture_valid": "fixtures/sfdc-integrator/sfdc-integrator-deploy-request.json",
+      "characterization_tests": [
+        "SfdcIntegratorControllerCompatibilityTest#deploy_validFullRequest_returns200WithSuccessBody",
+        "SfdcIntegratorControllerCompatibilityTest#deploy_validFullRequest_delegatesExactlyOnce",
+        "SfdcIntegratorControllerCompatibilityTest#deploy_serviceThrowsException_returns500WithSafeBody",
+        "SfdcIntegratorControllerCompatibilityTest#deploy_malformedJson_returns400WithExceptionHandlerBody"
+      ]
+    },
+    {
+      "id": "SFDC-002",
+      "method": "POST",
+      "path": "/validate",
+      "handler_method": "validate",
+      "request_style": "JSON body — DeployRequest",
+      "request_dto": "DeployRequest",
+      "required_fields": [],
+      "optional_fields": ["pipelineId", "stepId", "orgUrl"],
+      "success_status": 200,
+      "success_body": "SUCCESS",
+      "success_content_type": "text/plain",
+      "error_status_malformed_json": 400,
+      "error_body_malformed_json": "Malformed request body",
+      "error_status_service_exception": 500,
+      "error_body_service_exception": "Internal service error",
+      "delegated_service": "SfdcIntegratorService.validate(DeployRequest)",
+      "delegation_mode": "synchronous acknowledgement — controller returns SUCCESS after delegation call returns",
+      "classification_context": "GovernanceDataCategory.SFDC_ARTIFACT / operation=validate",
+      "fixture_valid": "fixtures/sfdc-integrator/sfdc-integrator-validate-request.json",
+      "characterization_tests": [
+        "SfdcIntegratorControllerCompatibilityTest#validate_validFullRequest_returns200WithSuccessBody",
+        "SfdcIntegratorControllerCompatibilityTest#validate_validFullRequest_delegatesExactlyOnce",
+        "SfdcIntegratorControllerCompatibilityTest#validate_serviceThrowsException_returns500WithSafeBody",
+        "SfdcIntegratorControllerCompatibilityTest#validate_malformedJson_returns400WithExceptionHandlerBody"
+      ]
+    }
+  ],
+  "exception_handler": {
+    "class": "SfdcExceptionHandler",
+    "malformed_json": {
+      "trigger": "HttpMessageNotReadableException",
+      "status": 400,
+      "body": "Malformed request body"
+    },
+    "unhandled_exception": {
+      "trigger": "Exception",
+      "status": 500,
+      "body": "Internal service error",
+      "risk_note": "Catch-all may obscure root causes; safe error response modernization tracked for a later story"
+    }
+  },
+  "shared_dto_note": "Both /deploy and /validate routes use the same DeployRequest DTO. Route semantics differ: /deploy commits the Salesforce metadata deployment; /validate runs a check-only deployment and does not persist changes to the org.",
+  "change_gate": "Any change that causes a characterization test in SfdcIntegratorControllerCompatibilityTest to fail must be accompanied by updated consumer migration guidance, an update to this contract map, and an updated entry in fixtures/contracts/legacy-release/legacy-contract-inventory.json."
+}

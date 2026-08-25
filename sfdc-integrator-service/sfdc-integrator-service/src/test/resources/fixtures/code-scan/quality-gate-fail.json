@@ -1,0 +1,9 @@
+{
+  "_comment": "Synthetic quality gate result fixture for a failing gate — no real thresholds or customer data",
+  "pipelineId": "pipeline-fixture-cs-compat-002",
+  "status": "FAIL",
+  "criticalThreshold": 0,
+  "criticalViolations": 3,
+  "passed": false,
+  "evaluatedAt": "2024-01-15T11:05:00Z"
+}

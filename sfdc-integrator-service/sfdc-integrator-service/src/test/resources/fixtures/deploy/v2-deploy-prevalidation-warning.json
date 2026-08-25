@@ -1,0 +1,8 @@
+{
+  "_comment": "Valid required fields but missing repositoryId, branch, and packageId — triggers prevalidation warnings",
+  "customerId": "customer-fixture-001",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "taskId": "step-deploy-fixture-002",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-deploy-fixture-002"
+}

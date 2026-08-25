@@ -1,0 +1,10 @@
+{
+  "_comment": "JWT claims map with an iss value that does not match the expected identity provider. JwtValidators.createDefaultWithIssuer() must reject these claims when issuer-uri is configured.",
+  "sub": "test-caller-subject-006",
+  "client_id": "sfdc-test-client-006",
+  "scope": "quick-deploy",
+  "iss": "https://untrusted-issuer.example.com",
+  "aud": ["sfdc-integrator"],
+  "exp": 9999999999,
+  "iat": 1700000000
+}

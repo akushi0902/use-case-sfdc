@@ -1,0 +1,22 @@
+{
+  "_comment": "Metadata for WO-144 trace-context test fixtures. Describes the safe synthetic values used for span attribute assertions.",
+  "correlationIds": {
+    "valid": "trace-test-cid-001",
+    "stopRequest": "trace-test-cid-002",
+    "validationFailure": "trace-test-cid-003"
+  },
+  "expectedSpanAttributes": {
+    "operation": ["quick-deploy-start", "quick-deploy-stop"],
+    "lifecycle.phase": ["request-received", "validation", "dispatch", "cancellation", "exception"],
+    "outcome": ["accepted", "rejected", "error"],
+    "http.route": ["/quickdeploy", "/quickdeploy/stop"]
+  },
+  "prohibitedAttributeKeys": [
+    "jobId",
+    "customerId",
+    "pipelineId",
+    "requestBody",
+    "bearerToken",
+    "sfdc.credential"
+  ]
+}

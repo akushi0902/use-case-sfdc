@@ -1,0 +1,6 @@
+{
+  "_comment": "WO-122 injection fixture: deploymentRequestId contains a pipe character (|), a shell metacharacter that chains commands. Should be rejected with command-separator-or-metacharacter category.",
+  "deploymentRequestId": "deploy-req-safe-006|cat /etc/shadow",
+  "pipelineId": "pipeline-safe-006",
+  "stepId": "step-safe-006"
+}

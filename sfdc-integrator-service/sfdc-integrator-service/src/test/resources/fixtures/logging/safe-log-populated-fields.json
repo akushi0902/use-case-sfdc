@@ -1,0 +1,8 @@
+{
+  "_comment": "Fixture: safe log event with all allow-listed fields populated. Used to verify SafeStructuredLogger emits operation, controller, correlationId, outcome, pipelineId, stepId.",
+  "operation": "quick-deploy-start",
+  "controller": "JobExecutionController",
+  "outcome": "ACCEPTED",
+  "pipelineId": "pipeline-safe-log-001",
+  "stepId": "step-safe-log-01"
+}

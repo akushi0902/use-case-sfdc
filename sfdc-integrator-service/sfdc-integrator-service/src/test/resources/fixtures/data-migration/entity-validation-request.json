@@ -1,0 +1,7 @@
+{
+  "_comment": "Sanitized fixture for migration entity validation compatibility test. Uses example.internal placeholder URLs only.",
+  "pipelineId": "pipeline-fixture-ev-compat-001",
+  "stepId": "step-fixture-ev-compat-001",
+  "sourceOrgUrl": "https://source.fixture.example.internal",
+  "targetOrgUrl": "https://target.fixture.example.internal"
+}

@@ -1,0 +1,7 @@
+{
+  "deploymentRequestId": "deploy-req-boundary-004",
+  "pipelineId": "pipeline-boundary-004",
+  "stepId": "step-boundary-qdeploy-04",
+  "fallbackTaskId": "fallback-boundary-004",
+  "unknownExtraField": "value-that-should-be-ignored"
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "Sanitized fixture for quick deploy classification tests. No real org URLs, tokens, or credentials.",
+  "deploymentRequestId": "deploy-req-fixture-001",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-qdeploy-fixture-001",
+  "fallbackTaskId": "fallback-task-fixture-001",
+  "_governance": {
+    "expectedCategory": "JOB_METADATA",
+    "expectedClassification": "CONFIDENTIAL",
+    "expectedRetentionHint": "STANDARD",
+    "operation": "quick-deploy-start"
+  }
+}

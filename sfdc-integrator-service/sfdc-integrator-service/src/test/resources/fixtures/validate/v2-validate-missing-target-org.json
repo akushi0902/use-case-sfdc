@@ -1,0 +1,9 @@
+{
+  "_comment": "Missing required targetOrgId — should be rejected with HTTP 400",
+  "customerId": "customer-fixture-001",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "taskId": "step-validate-fixture-001",
+  "repositoryId": "repo-fixture-001",
+  "branch": "main",
+  "packageId": "package-fixture-001"
+}

@@ -1,0 +1,7 @@
+{
+  "_comment": "OpenAPI example for HTTP 403 Forbidden response. No real tokens or credentials included. Indicates the JWT was valid but lacks the required scope or permission.",
+  "errorCode": "INSUFFICIENT_SCOPE",
+  "message": "The authenticated caller does not have the required scope to perform this operation.",
+  "correlationId": "corr-example-00000000-0000-0000-0000-000000000403",
+  "remediation": "Request a token with the required scope from your identity provider. Contact your Opsera platform administrator if you believe this is an error."
+}

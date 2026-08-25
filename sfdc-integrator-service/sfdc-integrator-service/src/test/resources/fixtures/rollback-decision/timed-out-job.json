@@ -1,0 +1,19 @@
+{
+  "_comment": "Fixture: DEPLOY job timed out during execution — rollback eligible and recommended",
+  "jobId": "rd-fixture-timedout-001",
+  "correlationId": "corr-rd-timedout-001",
+  "operationType": "DEPLOY",
+  "currentState": "TIMED_OUT",
+  "checkpoints": [
+    {"sequenceNumber": 1, "checkpointCode": "PRE_VALIDATE_OK",    "stateAtCheckpoint": "RUNNING",   "safeMessage": "Pre-validation passed"},
+    {"sequenceNumber": 2, "checkpointCode": "DEPLOY_APPLY_START", "stateAtCheckpoint": "RUNNING",   "safeMessage": "Deployment apply started"},
+    {"sequenceNumber": 3, "checkpointCode": "TIMEOUT_DETECTED",   "stateAtCheckpoint": "TIMED_OUT", "safeMessage": "Job exceeded max execution duration"}
+  ],
+  "expectedRollbackDecision": {
+    "rollbackEligible": true,
+    "rollbackRecommended": true,
+    "rollbackReasonCode": "TIMED_OUT_DURING_EXECUTION",
+    "failedStage": "TIMEOUT",
+    "lastSuccessfulCheckpoint": "TIMEOUT_DETECTED"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "_comment": "Sanitized retention metadata fixture with active legal hold. Purge eligibility status is LEGAL_HOLD regardless of retention expiration. All values are synthetic.",
+  "jobRef": "pipeline-fixture-c3d4e5f6a1b2",
+  "artifactRef": null,
+  "dataCategory": "AUDIT_CONTEXT",
+  "classification": "CONFIDENTIAL",
+  "retentionCategory": "AUDIT_MANDATED",
+  "retentionStart": "2020-01-01T00:00:00Z",
+  "retentionExpiration": "2030-01-01T00:00:00Z",
+  "legalHold": true,
+  "purgeEligibilityStatus": "LEGAL_HOLD",
+  "createdAt": "2020-01-01T00:00:00Z",
+  "updatedAt": "2024-01-01T00:00:00Z"
+}

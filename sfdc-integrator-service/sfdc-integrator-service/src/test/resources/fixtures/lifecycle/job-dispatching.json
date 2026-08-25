@@ -1,0 +1,13 @@
+{
+  "_comment": "Fixture: job in DISPATCHING state — worker dispatch initiated, waiting for execution start. No checkpoints yet from the worker.",
+  "jobId": "job-fixture-dispatching-002",
+  "correlationId": "cid-fixture-dispatching-002",
+  "operationType": "DEPLOY",
+  "currentState": "DISPATCHING",
+  "customerIdHash": "b2c3d4e5f6789012345678901234567890abcdef01234567890123456789012b",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "pipelineId": "pipeline-fixture-002",
+  "stepId": "step-deploy-fixture-002",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 1
+}

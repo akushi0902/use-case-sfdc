@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic fixture: checkpoint event with an unknown checkpointCode and no recognized statusCategory — should be persisted as checkpoint-only with UNKNOWN state",
+  "jobId": "job-checkpoint-fixture-004",
+  "correlationId": "corr-checkpoint-fixture-004",
+  "checkpointCode": "CUSTOM_PIPELINE_STEP",
+  "statusCategory": "CUSTOM_CATEGORY",
+  "sequenceNumber": 1,
+  "eventTimestamp": "2024-01-01T13:00:00.000Z",
+  "safeMessage": "Custom pipeline step completed",
+  "messageId": "msg-checkpoint-fixture-unknown-001",
+  "safeReasonCode": null
+}

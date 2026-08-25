@@ -1,0 +1,12 @@
+{
+  "_comment": "Sanitized fixture for SFDC integrator (deploy/validate) classification tests. Uses example.internal placeholder URL.",
+  "pipelineId": "pipeline-fixture-sfdc-001",
+  "stepId": "step-sfdc-fixture-001",
+  "orgUrl": "https://org.example.internal",
+  "_governance": {
+    "expectedCategory": "SFDC_ARTIFACT",
+    "expectedClassification": "RESTRICTED",
+    "expectedRetentionHint": "EXTENDED",
+    "operation": "deploy"
+  }
+}

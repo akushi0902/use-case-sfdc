@@ -1,0 +1,33 @@
+# Forge Shipping Scan Suppression Entries — SFDC Integrator Service
+#
+# This file contains time-bounded, owner-tracked suppressions for scan findings
+# that are confirmed false positives or accepted risks.
+#
+# REQUIRED FIELDS for every entry:
+#   id           — unique identifier for this suppression (never reuse IDs)
+#   rule_id      — the scan rule ID, CVE, or CWE being suppressed
+#   tool         — which scanner this applies to (gitleaks | semgrep | dependency_check | trivy)
+#   owner        — GitHub team or user who is accountable for this exception
+#   justification — specific, verifiable reason this suppression is safe (not "false positive")
+#   expiry       — ISO 8601 date after which this suppression auto-expires and the gate fails
+#
+# Expired entries cause the gate to fail until the entry is renewed or removed.
+# Renewals require re-verification of the justification and a new owner sign-off.
+# Max suppression duration: 90 days (enforced by pipeline.yml suppression_policy).
+#
+# NEVER use suppressions to bypass critical secret findings or hardcoded credentials.
+# If a rule fires on a synthetic test fixture, update the fixture instead of suppressing.
+
+version: "1"
+suppressions: []
+# Example entry (remove comment markers when adding real suppressions):
+#
+# - id: supp-001
+#   rule_id: "semgrep.java.spring.security.audit.spring-csrf-disabled"
+#   tool: semgrep
+#   owner: "@opsera/security-review"
+#   justification: >
+#     CSRF protection is disabled intentionally for the /actuator/health endpoint
+#     which is unauthenticated by design. The endpoint returns no state-changing
+#     operations. Tracked in security exception log SE-2024-001.
+#   expiry: "2025-03-01"

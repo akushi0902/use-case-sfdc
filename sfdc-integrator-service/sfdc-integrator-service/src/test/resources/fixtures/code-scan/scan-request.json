@@ -1,0 +1,7 @@
+{
+  "_comment": "Sanitized fixture for scan submission request. Uses fixture.example.internal placeholder URLs only — no real repository paths, tokens, or customer data.",
+  "pipelineId": "pipeline-fixture-cs-compat-001",
+  "stepId": "step-fixture-cs-compat-001",
+  "repositoryUrl": "https://repo.fixture.example.internal/fixture-org/fixture-repo",
+  "branch": "feature-fixture-branch-001"
+}

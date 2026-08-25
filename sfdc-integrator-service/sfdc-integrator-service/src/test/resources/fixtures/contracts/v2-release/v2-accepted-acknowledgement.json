@@ -1,0 +1,10 @@
+{
+  "_comment": "Sanitized fixture for a v2 ACCEPTED acknowledgement response. statusUrl uses example.internal placeholder.",
+  "jobId": "job-example-00000000-0000-0000-0000-000000000001",
+  "correlationId": "corr-example-00000000-0000-0000-0000-000000000001",
+  "statusUrl": "https://example.internal/api/v2/release/jobs/job-example-00000000-0000-0000-0000-000000000001/status",
+  "state": "ACCEPTED",
+  "acceptedAt": "2024-01-01T00:00:00.000Z",
+  "operationType": "DEPLOY",
+  "safeWarnings": []
+}

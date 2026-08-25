@@ -1,0 +1,8 @@
+{
+  "_comment": "Synthetic JWT claims fixture for a principal with an unrelated scope — must not satisfy quickdeploy.submit",
+  "sub": "fixture-subject-002",
+  "client_id": "fixture-client-002",
+  "iss": "https://idp.fixture.example.internal/",
+  "aud": ["sfdc-integrator"],
+  "scope": "read:reports analytics.view"
+}

@@ -1,0 +1,109 @@
+{
+  "_comment": "Migration evidence report for legacy → v2 P0 release operations. Used as a release gate before canary expansion (WO-153 AC-4).",
+  "reportVersion": "1.0",
+  "service": "sfdc-integrator-service",
+  "generatedAt": "2026-08-25",
+  "purpose": "Automated parity evidence showing v2 release commands preserve operational intent of legacy workflows while intentionally improving acknowledgement and status contracts.",
+  "parityStatus": "COEXISTENCE_VERIFIED",
+  "paritySuiteClass": "com.opsera.integrator.sfdc.contracts.parity.LegacyV2ParityMvcTest",
+  "operations": [
+    {
+      "operationId": "PARITY-QD-001",
+      "operation": "QUICK_DEPLOY",
+      "legacyRoute": "POST /quickdeploy",
+      "v2Route": "POST /api/v2/sfdc/release-jobs (operationType=QUICK_DEPLOY)",
+      "legacyController": "JobExecutionController",
+      "v2Controller": "ReleaseJobController",
+      "legacyRequestFixture": "fixtures/contracts/parity/parity-quick-deploy-pair.json#legacyRoute.request",
+      "v2RequestFixture": "fixtures/contracts/parity/parity-quick-deploy-pair.json#v2Route.request",
+      "expectedLegacyResponse": { "httpStatus": 200, "bodyShape": "SUCCESS", "contentType": "text/plain" },
+      "expectedV2Response": {
+        "httpStatus": 202,
+        "bodyShape": "AcceptedAcknowledgement",
+        "hasLocationHeader": true,
+        "statusUrlPattern": "/api/v2/sfdc/release-jobs/{jobId}/status",
+        "requiredFields": ["jobId", "correlationId", "state", "operationType", "statusUrl", "acceptedAt"]
+      },
+      "parityStatus": "COEXISTING",
+      "intentionalDifferences": ["HTTP_STATUS (200→202)", "RESPONSE_BODY_SHAPE (plain→JSON)", "LOCATION_HEADER (absent→present)", "IDENTITY_FIELDS (none→customerId+sfdcToolId required)"],
+      "coveredByTest": "LegacyV2ParityMvcTest#quickDeploy_legacyReturns200Success_v2Returns202WithAck"
+    },
+    {
+      "operationId": "PARITY-D-001",
+      "operation": "DEPLOY",
+      "legacyRoute": "POST /deploy",
+      "v2Route": "POST /api/v2/sfdc/release-jobs (operationType=DEPLOY)",
+      "legacyController": "SfdcIntegratorController",
+      "v2Controller": "ReleaseJobController",
+      "legacyRequestFixture": "fixtures/contracts/parity/parity-deploy-pair.json#legacyRoute.request",
+      "v2RequestFixture": "fixtures/contracts/parity/parity-deploy-pair.json#v2Route.request",
+      "expectedLegacyResponse": { "httpStatus": 200, "bodyShape": "SUCCESS", "contentType": "text/plain" },
+      "expectedV2Response": {
+        "httpStatus": 202,
+        "bodyShape": "AcceptedAcknowledgement",
+        "hasLocationHeader": true
+      },
+      "parityStatus": "COEXISTING",
+      "intentionalDifferences": ["HTTP_STATUS (200→202)", "RESPONSE_BODY_SHAPE (plain→JSON)", "LOCATION_HEADER (absent→present)", "ORG_URL_FIELD (in payload→removed, credentials via secrets)"],
+      "coveredByTest": "LegacyV2ParityMvcTest#deploy_legacyReturns200Success_v2Returns202WithAck"
+    },
+    {
+      "operationId": "PARITY-V-001",
+      "operation": "VALIDATE",
+      "legacyRoute": "POST /validate",
+      "v2Route": "POST /api/v2/sfdc/release-jobs (operationType=VALIDATE)",
+      "legacyController": "SfdcIntegratorController",
+      "v2Controller": "ReleaseJobController",
+      "expectedLegacyResponse": { "httpStatus": 200, "bodyShape": "SUCCESS", "contentType": "text/plain" },
+      "expectedV2Response": { "httpStatus": 202, "bodyShape": "AcceptedAcknowledgement", "hasLocationHeader": true },
+      "parityStatus": "COEXISTING",
+      "intentionalDifferences": ["HTTP_STATUS (200→202)", "RESPONSE_BODY_SHAPE (plain→JSON)"],
+      "coveredByTest": "LegacyV2ParityMvcTest#validate_legacyReturns200Success_v2Returns202WithAck"
+    },
+    {
+      "operationId": "PARITY-C-001",
+      "operation": "CANCEL",
+      "legacyRoute": "POST /quickdeploy/stop",
+      "v2Route": "POST /api/v2/sfdc/release-jobs (operationType=CANCEL)",
+      "legacyController": "JobExecutionController",
+      "v2Controller": "ReleaseJobController (via facade → V2UnsupportedOperationException)",
+      "expectedLegacyResponse": { "httpStatus": 200, "bodyShape": "SUCCESS" },
+      "expectedV2Response": { "httpStatus": 422, "errorCode": "UNSUPPORTED_OPERATION" },
+      "parityStatus": "INTENTIONAL_DIVERGENCE",
+      "intentionalDifferences": ["HTTP_STATUS (200→422)", "CANCEL_PATH (dedicated stop endpoint vs unsupported v2 CANCEL pending separate WO)"],
+      "coveredByTest": "LegacyV2ParityMvcTest#cancel_legacyStopReturns200_v2CancelReturns422"
+    }
+  ],
+  "validationBehaviorParity": [
+    {
+      "scenario": "MISSING_REQUIRED_FIELD",
+      "legacy": { "missingField": "deploymentRequestId", "httpStatus": 400, "errorCode": "VALIDATION_FAILED", "hasFieldErrors": true },
+      "v2": { "missingField": "taskId", "httpStatus": 400, "errorCode": "VALIDATION_FAILED", "hasFieldErrors": true },
+      "difference": "Both return structured 400 JSON — parity achieved",
+      "coveredByTest": "LegacyV2ParityMvcTest#validation_legacyAndV2_bothReturn400WithStructuredError"
+    }
+  ],
+  "telemetryParity": {
+    "legacyMetric": "sfdc.release.acceptance.attempts (ReleaseLifecycleMetrics) with operation=QUICK_DEPLOY, outcome=accepted",
+    "v2Metric": "sfdc.release.api.requests (ReleaseCoexistenceTelemetry) with routeVersion=v2, operationType=QUICK_DEPLOY, outcome=accepted",
+    "coveredByTest": "LegacyV2ParityMvcTest#telemetry_legacyAndV2_emitBoundedMetricTags"
+  },
+  "logSafetyParity": {
+    "assertion": "Neither legacy nor v2 controllers emit raw credential-like values (password, token, secret, apikey) to SafeStructuredLogger",
+    "fixtureUsed": "fixtures/contracts/parity/parity-invalid-with-credential-fragment.json",
+    "coveredByTest": "LegacyV2ParityMvcTest#logSafety_noCredentialFragmentsInSafeLoggerCalls"
+  },
+  "openApiParity": {
+    "assertion": "V2 routes and schemas used in parity tests are documented in the OpenAPI specification",
+    "requiredPaths": ["/api/v2/sfdc/release-jobs", "/quickdeploy"],
+    "requiredSchemas": ["ReleaseCommandRequest", "AcceptedAcknowledgement"],
+    "coveredByTest": "ParityOpenApiTest"
+  },
+  "canaryGatingConditions": [
+    "All parity tests in LegacyV2ParityMvcTest pass",
+    "Migration evidence report parityStatus == COEXISTENCE_VERIFIED for QUICK_DEPLOY, DEPLOY, VALIDATE",
+    "CANCEL divergence is explicitly documented as INTENTIONAL_DIVERGENCE",
+    "No credential fragments detected in log output",
+    "OpenAPI spec includes all required v2 paths and schemas"
+  ]
+}

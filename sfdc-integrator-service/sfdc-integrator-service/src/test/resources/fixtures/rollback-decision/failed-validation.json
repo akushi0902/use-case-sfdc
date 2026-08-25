@@ -1,0 +1,18 @@
+{
+  "_comment": "Fixture: VALIDATE_ONLY job failed — rollback not eligible (no deployment occurred)",
+  "jobId": "rd-fixture-failed-validation-001",
+  "correlationId": "corr-rd-failed-validation-001",
+  "operationType": "VALIDATE_ONLY",
+  "currentState": "FAILED",
+  "checkpoints": [
+    {"sequenceNumber": 1, "checkpointCode": "PRE_VALIDATE_START", "stateAtCheckpoint": "RUNNING", "safeMessage": "Validation started"},
+    {"sequenceNumber": 2, "checkpointCode": "PRE_VALIDATE_ERROR", "stateAtCheckpoint": "FAILED",  "safeMessage": "Validation failed — metadata reference error"}
+  ],
+  "expectedRollbackDecision": {
+    "rollbackEligible": false,
+    "rollbackRecommended": false,
+    "rollbackReasonCode": "VALIDATION_ONLY_NO_DEPLOYMENT",
+    "failedStage": "PRE_VALIDATION",
+    "lastSuccessfulCheckpoint": "PRE_VALIDATE_ERROR"
+  }
+}

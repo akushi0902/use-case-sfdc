@@ -1,0 +1,27 @@
+# worker-role-binding.yaml
+#
+# Namespace-scoped RoleBinding linking the sfdc-worker-role to the sfdc-worker
+# service account. Both the role and binding are namespace-scoped — no
+# ClusterRoleBinding is used.
+#
+# Constraint: roleRef.name must match the Role defined in worker-role.yaml.
+# Constraint: subjects[0].name must match the ServiceAccount in worker-service-account.yaml.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sfdc-worker-role-binding
+  namespace: ${WORKER_NAMESPACE}
+  labels:
+    app: sfdc-integrator-service
+    component: worker
+    workload: release-worker
+    managed-by: sfdc-deploy-scripts
+subjects:
+  - kind: ServiceAccount
+    name: sfdc-worker
+    namespace: ${WORKER_NAMESPACE}
+roleRef:
+  kind: Role
+  name: sfdc-worker-role
+  apiGroup: rbac.authorization.k8s.io

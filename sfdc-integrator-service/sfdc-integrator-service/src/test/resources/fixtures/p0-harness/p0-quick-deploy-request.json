@@ -1,0 +1,9 @@
+{
+  "_comment": "P0 Harness fixture: valid v2 quick deploy submission. All required fields present.",
+  "deployRequestId": "p0-deploy-req-fixture-001",
+  "customerId": "p0-customer-fixture-001",
+  "sfdcToolId": "p0-sfdc-tool-fixture-001",
+  "taskId": "p0-step-qdeploy-fixture-001",
+  "pipelineId": "p0-pipeline-fixture-001",
+  "stepId": "p0-step-qdeploy-fixture-001"
+}

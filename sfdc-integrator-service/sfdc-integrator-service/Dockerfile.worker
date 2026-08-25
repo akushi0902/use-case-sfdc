@@ -1,0 +1,101 @@
+# ── SFDC Integrator Worker Image ──────────────────────────────────────────────
+# Dedicated release-execution worker separate from the API runtime.
+# Packages Salesforce CLI, Git, Java 21 JRE, and the embedded release scripts.
+# API pods remain lightweight; workers carry the heavy CLI toolchain.
+#
+# Build context: sfdc-integrator-service/sfdc-integrator-service/
+#   docker build -f Dockerfile.worker -t sfdc-worker:dev .
+#
+# Supported command modes:
+#   self-test          — prints tool versions, verifies script paths, exits 0 (no external calls)
+#   dry-run            — validates env configuration and prints execution plan (no Salesforce calls)
+#   execute <command>  — runs the release command (QUICK_DEPLOY, DEPLOY, VALIDATE, ROLLBACK, etc.)
+#
+# Required environment variables at runtime (mounted references only — never baked in):
+#   SFDC_INSTANCE_URL        Salesforce org instance URL
+#   SFDC_CLIENT_ID           Connected App client ID
+#   SFDC_CLIENT_SECRET       Connected App client secret
+#   SFDC_USERNAME            Salesforce username
+#   CORRELATION_ID           Correlation ID propagated from the API request
+#   COMMAND_TYPE             Release command type (QUICK_DEPLOY, DEPLOY, VALIDATE, etc.)
+#   JOB_ID                   Durable job identifier from the lifecycle service
+#   DEPLOYMENT_REQUEST_ID    Salesforce deployment request ID (quick-deploy path)
+#
+# CI-safe validation (no Docker required):
+#   ./gradlew validateWorkerImage
+# ──────────────────────────────────────────────────────────────────────────────
+
+FROM eclipse-temurin:21-jre-alpine AS base
+
+ARG NODE_VERSION="20"
+ARG SF_CLI_VERSION="latest"
+ARG BUILD_DATE=""
+ARG SOURCE_REVISION=""
+ARG JAVA_VERSION="21"
+
+# ── Runtime dependencies ───────────────────────────────────────────────────────
+# bash   — required by all release scripts (no /bin/sh-isms)
+# curl   — required for Salesforce REST health checks in diagnostic scripts
+# git    — required for source clone and commit reference operations
+# jq     — required for JSON payload parsing in release scripts
+# nodejs/npm — required for Salesforce CLI (@salesforce/cli is a Node package)
+RUN apk add --no-cache \
+        bash \
+        curl \
+        git \
+        jq \
+        nodejs \
+        npm \
+    && npm install --global @salesforce/cli@"${SF_CLI_VERSION}" \
+    && npm cache clean --force \
+    && sf --version 2>&1 | head -1
+
+# ── Non-root user ──────────────────────────────────────────────────────────────
+# Worker container never runs as root.
+# uid 1001 / gid 1001 — does not conflict with standard system accounts.
+RUN addgroup -g 1001 -S sfdc-worker \
+    && adduser -u 1001 -S sfdc-worker -G sfdc-worker
+
+# ── Directory layout ───────────────────────────────────────────────────────────
+# /opt/sfdc-worker/scripts  — embedded Salesforce release scripts (read+execute)
+# /opt/sfdc-worker          — entrypoint and configuration assets
+# /workspace                — per-job scratch space (mounted or ephemeral)
+RUN mkdir -p /opt/sfdc-worker/scripts /workspace \
+    && chown -R sfdc-worker:sfdc-worker /opt/sfdc-worker /workspace
+
+# ── Release scripts ────────────────────────────────────────────────────────────
+# Source: src/main/resources/scripts/
+# Installed to a stable dispatch path: /opt/sfdc-worker/scripts/<name>.sh
+# Callers must reference scripts by name under this path — do not rely on relative paths.
+COPY --chown=sfdc-worker:sfdc-worker \
+    src/main/resources/scripts/ \
+    /opt/sfdc-worker/scripts/
+
+# ── Worker entrypoint ──────────────────────────────────────────────────────────
+COPY --chown=sfdc-worker:sfdc-worker \
+    scripts/worker/entrypoint.sh \
+    /opt/sfdc-worker/entrypoint.sh
+
+RUN chmod 550 /opt/sfdc-worker/entrypoint.sh \
+    && chmod -R 550 /opt/sfdc-worker/scripts/ \
+    && ls -la /opt/sfdc-worker/scripts/
+
+# ── Image labels ───────────────────────────────────────────────────────────────
+LABEL org.opencontainers.image.title="sfdc-integrator-worker" \
+      org.opencontainers.image.description="Salesforce release execution worker: deploy, validate, quick-deploy, rollback, package, diagnostics" \
+      org.opencontainers.image.source="sfdc-integrator-service" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      com.opsera.java.version="${JAVA_VERSION}" \
+      com.opsera.node.version="${NODE_VERSION}" \
+      com.opsera.workload.class="salesforce-release-worker" \
+      com.opsera.runtime.user="sfdc-worker" \
+      com.opsera.scripts.path="/opt/sfdc-worker/scripts"
+
+# ── Runtime context ────────────────────────────────────────────────────────────
+WORKDIR /workspace
+USER sfdc-worker
+
+ENTRYPOINT ["/opt/sfdc-worker/entrypoint.sh"]
+# Default: self-test so a bare `docker run sfdc-worker:dev` verifies the image
+CMD ["self-test"]

@@ -1,0 +1,15 @@
+{
+  "_comment": "Fixture: audit event emitted when a job reaches the TIMED_OUT terminal state (JOB_TIMEOUT_FINALIZED operation). Both the primary transition event and a secondary DIAGNOSTIC_UPDATED event are emitted; this fixture shows the primary event.",
+  "eventId": "audit-fixture-timeout-001",
+  "correlationId": "cid-fixture-timeout-001",
+  "actorType": "SYSTEM",
+  "actorRef": "cid-fixture-timeout-001",
+  "resourceType": "LIFECYCLE_JOB",
+  "resourceRef": "job-fixture-timeout-001",
+  "operation": "JOB_TIMEOUT_FINALIZED",
+  "classification": "CONFIDENTIAL",
+  "safeMetadata": "{\"jobId\":\"job-fixture-timeout-001\",\"fromState\":\"RUNNING\",\"toState\":\"TIMED_OUT\",\"operationType\":\"QUICK_DEPLOY\"}",
+  "eventTimestamp": "2024-01-01T11:00:00Z",
+  "requestSource": "JobLifecycleService.transition",
+  "retentionExpiryAt": "2025-01-01T11:00:00Z"
+}

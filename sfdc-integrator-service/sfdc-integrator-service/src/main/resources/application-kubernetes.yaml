@@ -1,0 +1,63 @@
+# application-kubernetes.yaml
+# Spring profile configuration active when SPRING_PROFILES_ACTIVE=kubernetes
+# or when --spring.profiles.active=kubernetes is passed at runtime.
+#
+# Activated automatically in the Kubernetes deployment scripts via:
+#   SPRING_PROFILES_ACTIVE=kubernetes
+#
+# Required environment variables when this profile is active:
+#   DB_URL, DB_USER, DB_PASSWORD      (see application.yaml datasource block)
+#   KAFKA_BOOTSTRAP_SERVERS            (Kafka cluster bootstrap address)
+#
+# These values are read from Kubernetes Secrets projected as environment variables.
+# Never inject them as plain ConfigMap values or commit them to source control.
+
+server:
+  # Graceful shutdown: in-flight requests complete before the pod terminates.
+  # The default 30s Kubernetes terminationGracePeriodSeconds must be longer than
+  # timeout-per-shutdown-phase to allow the JVM to finish before the container is
+  # force-killed.
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    # Allow up to 60 seconds for in-flight requests to complete on shutdown.
+    # Tune this value based on the longest expected request duration.
+    timeout-per-shutdown-phase: 60s
+
+  kafka:
+    # Kafka bootstrap server address injected from the deployment environment.
+    # Format: <host>:<port> or comma-separated list for multi-broker setups.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: sfdc-integrator-service
+      auto-offset-reset: earliest
+    producer:
+      acks: all
+      retries: 3
+
+  hazelcast:
+    # Hazelcast Kubernetes discovery is configured here as a documentation anchor.
+    # Full Kubernetes RBAC-based discovery requires a HazelcastConfig bean that
+    # activates the KubernetesDiscoveryStrategyFactory from hazelcast-kubernetes.
+    # When running in Kubernetes, set HZ_CLUSTERNAME to prevent cross-namespace
+    # cluster merges. Example:
+    #   HZ_CLUSTERNAME=sfdc-integrator-<environment>
+    # See: https://docs.hazelcast.com/hazelcast/latest/kubernetes/kubernetes-auto-discovery
+    config: classpath:hazelcast-kubernetes.yaml  # optional; created in a future WO
+
+management:
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,flyway,metrics
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true

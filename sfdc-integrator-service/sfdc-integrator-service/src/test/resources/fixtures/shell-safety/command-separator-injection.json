@@ -1,0 +1,7 @@
+{
+  "_comment": "WO-122 injection fixture: deploymentRequestId contains a command separator (semicolon). Should be rejected with SHELL_UNSAFE_INPUT before any service dispatch.",
+  "deploymentRequestId": "deploy-req-001;rm -rf /",
+  "pipelineId": "pipeline-safe-002",
+  "stepId": "step-safe-002",
+  "fallbackTaskId": "fallback-safe-002"
+}

@@ -1,0 +1,14 @@
+{
+  "_comment": "Fixture: audit event for a successful quick deploy job submission.",
+  "eventId": "audit-fixture-submit-001",
+  "correlationId": "cid-fixture-audit-001",
+  "actorType": "APPLICATION",
+  "actorRef": "pipeline-fixture-audit-001",
+  "resourceType": "QUICK_DEPLOY_JOB",
+  "resourceRef": "pipeline-fixture-audit-001",
+  "operation": "JOB_SUBMITTED",
+  "classification": "CONFIDENTIAL",
+  "safeMetadata": "{\"pipelineId\":\"pipeline-fixture-audit-001\",\"stepId\":\"step-fixture-audit-001\",\"outcome\":\"SUBMITTED\"}",
+  "eventTimestamp": "2026-01-15T10:00:00Z",
+  "requestSource": "JobExecutionController.startQuickDeploy"
+}

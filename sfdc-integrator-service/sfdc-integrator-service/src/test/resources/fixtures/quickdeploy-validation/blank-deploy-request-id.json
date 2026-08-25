@@ -1,0 +1,7 @@
+{
+  "_comment": "WO-121 fixture: quick deploy request with deploymentRequestId set to whitespace only. @NotBlank rejects whitespace-only values. Service must not be called.",
+  "deploymentRequestId": "   ",
+  "pipelineId": "pipeline-val-004",
+  "stepId": "step-val-qdeploy-04",
+  "fallbackTaskId": "fallback-task-val-004"
+}

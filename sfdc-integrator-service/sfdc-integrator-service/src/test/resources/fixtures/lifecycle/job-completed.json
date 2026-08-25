@@ -1,0 +1,35 @@
+{
+  "_comment": "Fixture: job in COMPLETED state with two checkpoints and a successful worker attempt.",
+  "jobId": "job-fixture-completed-003",
+  "correlationId": "cid-fixture-completed-003",
+  "operationType": "VALIDATE",
+  "currentState": "COMPLETED",
+  "customerIdHash": "c3d4e5f6789012345678901234567890123456789012345678901234567890ab",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "pipelineId": "pipeline-fixture-001",
+  "stepId": "step-validate-fixture-003",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 2,
+  "checkpoints": [
+    {
+      "sequenceNumber": 1,
+      "checkpointCode": "DISPATCH_STARTED",
+      "stateAtCheckpoint": "RUNNING",
+      "safeMessage": "Worker dispatch initiated"
+    },
+    {
+      "sequenceNumber": 2,
+      "checkpointCode": "EXECUTION_COMPLETED",
+      "stateAtCheckpoint": "COMPLETED",
+      "safeMessage": "Validation completed successfully"
+    }
+  ],
+  "workerAttempts": [
+    {
+      "attemptNumber": 1,
+      "workerId": "worker-pod-fixture-002",
+      "outcome": "SUCCEEDED"
+    }
+  ],
+  "diagnostic": null
+}
