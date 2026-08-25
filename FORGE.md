@@ -203,3 +203,10 @@
 - **Files:** 11 (+922/-0)
 - **Duration:** 594ss
 - **Approach:** Implemented the WO-124 PII masking standard as a pure test-scope addition. SyntheticFixtureFactory uses SHA-256 with a fixed non-secret salt (sfdc-test-fixture-v1) to produce deterministic identifiers across all field categories. FixtureSafetyScanTest walks committed fixture and documentation paths and fails on JWT patterns, PEM private key headers, Salesforce production domains, long bearer tokens, and real email addresses — reporting only file path and category, never the matched value. MaskedFixtureControllerTest uses @WebMvcTest slices for DataMigrationController and PostRefreshTaskController with ArgumentCaptor<SafeLogEvent> to assert the allow-listed safe fields (pipelineId, stepId) while asserting absence of sourceOrgUrl, targetOrgUrl, and DTO toString fragments. Six sanitized fixture files cover all compliance-sensitive scenarios using fixture.example.internal domains and clearly synthetic prefixes. README documents the convention, allowed patterns, and code examples.
+
+## WO-132: User Story: WO-132 - Apply Retention Metadata to Jobs
+- **Status:** completed
+- **Commit:** `4010ae3`
+- **Files:** 25 (+1611/-11)
+- **Duration:** 609ss
+- **Approach:** Created governance/retention package with 10 domain types (RetentionCategory, PurgeEligibilityStatus, RetentionPolicy, RetentionPolicyProperties, RetentionPolicyResolver, RetentionMetadata, RetentionMetadataRepository, JdbcRetentionMetadataRepository, RetentionMetadataService, RetentionAssignmentException). Policy resolution uses injectable Clock for deterministic expiration. Legal hold always overrides ELIGIBLE. RETENTION_METADATA_ASSIGNED and LEGAL_HOLD_APPLIED audit events emitted. V4 migration ALTERs job_retention_metadata with 6 new columns and 5 indexes. RetentionMetadataService wired into DataMigrationController as representative governed path (assign before service call, legacy response unchanged). RETENTION_RECORD added to AuditResourceType; new audit keys added to SafeAuditMetadata allow-list.

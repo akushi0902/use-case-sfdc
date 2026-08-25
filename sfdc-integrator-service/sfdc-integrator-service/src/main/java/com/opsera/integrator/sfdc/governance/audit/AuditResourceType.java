@@ -21,5 +21,8 @@ public enum AuditResourceType {
     RELEASE_JOB,
 
     /** A post-refresh operation on an org after a sandbox refresh. */
-    POST_REFRESH_TASK
+    POST_REFRESH_TASK,
+
+    /** A retention metadata record for a job or artifact. */
+    RETENTION_RECORD
 }

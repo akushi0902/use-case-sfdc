@@ -5,6 +5,7 @@ import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.fixtures.SyntheticFixtureFactory;
 import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
+import com.opsera.integrator.sfdc.governance.retention.RetentionMetadataService;
 import com.opsera.integrator.sfdc.logging.SafeLogEvent;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.DataMigrationRequest;
@@ -66,6 +67,9 @@ class MaskedFixtureControllerTest {
 
         @MockBean
         private AuditEventWriter auditEventWriter;
+
+        @MockBean
+        private RetentionMetadataService retentionMetadataService;
 
         @Test
         @DisplayName("POST /datamigration: safe log event contains pipelineId and stepId")

@@ -1,0 +1,14 @@
+{
+  "_comment": "Sanitized retention metadata fixture for Restricted Salesforce artifact (EXTENDED retention, 7 years). All values are synthetic. Generated using SyntheticFixtureFactory.",
+  "jobRef": "pipeline-fixture-e5f6a1b2c3d4",
+  "artifactRef": "deploy-req-fixture-a1b2c3d4e5f6",
+  "dataCategory": "SFDC_ARTIFACT",
+  "classification": "RESTRICTED",
+  "retentionCategory": "EXTENDED",
+  "retentionStart": "2024-01-01T00:00:00Z",
+  "retentionExpiration": "2030-12-21T00:00:00Z",
+  "legalHold": false,
+  "purgeEligibilityStatus": "INELIGIBLE",
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-01-01T00:00:00Z"
+}

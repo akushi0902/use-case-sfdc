@@ -1,0 +1,14 @@
+{
+  "_comment": "Sanitized retention metadata fixture for Confidential job metadata (STANDARD retention). All values are synthetic. Generated using SyntheticFixtureFactory.",
+  "jobRef": "pipeline-fixture-b2c3d4e5f6a1",
+  "artifactRef": null,
+  "dataCategory": "JOB_METADATA",
+  "classification": "CONFIDENTIAL",
+  "retentionCategory": "STANDARD",
+  "retentionStart": "2024-01-01T00:00:00Z",
+  "retentionExpiration": "2025-01-01T00:00:00Z",
+  "legalHold": false,
+  "purgeEligibilityStatus": "INELIGIBLE",
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-01-01T00:00:00Z"
+}

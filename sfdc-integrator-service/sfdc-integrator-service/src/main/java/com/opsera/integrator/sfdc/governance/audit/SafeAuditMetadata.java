@@ -34,7 +34,10 @@ public final class SafeAuditMetadata {
             "operationType",
             "outcome",
             "resourceRef",
-            "requestSource"
+            "requestSource",
+            "retentionCategory",
+            "legalHold",
+            "purgeEligibilityStatus"
     );
 
     private SafeAuditMetadata() {}

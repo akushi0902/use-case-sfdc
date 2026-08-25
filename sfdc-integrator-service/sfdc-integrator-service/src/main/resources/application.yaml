@@ -93,6 +93,22 @@ sfdc:
         AUDIT_CONTEXT: EXTENDED
         CACHE_ENTRY: SHORT_TERM
 
+    retention:
+      # Maps each RetentionCategory to a retention window in days.
+      # STANDARD is the fail-closed default — must always be configured.
+      # These values are non-secret configuration and may appear in operational logs
+      # (category name + duration only — no customer or record identifiers).
+      # GDPR/CCPA baseline:
+      #   SHORT_TERM:      30 days  — transient operational data
+      #   STANDARD:       365 days  — Confidential job metadata (GDPR Article 17 default)
+      #   EXTENDED:      2555 days  — Restricted Salesforce artifacts (7 years, SOX baseline)
+      #   AUDIT_MANDATED: 3650 days — Audit trail records (10 years, regulatory mandate)
+      duration-days:
+        SHORT_TERM: 30
+        STANDARD: 365
+        EXTENDED: 2555
+        AUDIT_MANDATED: 3650
+
 springdoc:
   # Documentation endpoint: GET /api-docs returns the generated OpenAPI JSON.
   # NOTE: /api-docs is the documentation endpoint — it is NOT the business v2 route

@@ -5,6 +5,7 @@ import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationContext;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
+import com.opsera.integrator.sfdc.governance.retention.RetentionMetadataService;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.governance.classification.DataClassification;
 import com.opsera.integrator.sfdc.governance.classification.GovernanceDataCategory;
@@ -53,6 +54,9 @@ class DataMigrationControllerTest {
 
     @MockBean
     private AuditEventWriter auditEventWriter;
+
+    @MockBean
+    private RetentionMetadataService retentionMetadataService;
 
     @Test
     void migrate_validRequest_returns200Success() throws Exception {

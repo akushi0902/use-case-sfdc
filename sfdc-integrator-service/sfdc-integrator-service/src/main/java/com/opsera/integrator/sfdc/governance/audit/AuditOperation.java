@@ -37,5 +37,11 @@ public enum AuditOperation {
     PRIVACY_ACTION,
 
     /** A V2 release command was accepted through the command facade. */
-    RELEASE_COMMAND_ACCEPTED
+    RELEASE_COMMAND_ACCEPTED,
+
+    /** Retention metadata was assigned to a governed job or artifact record. */
+    RETENTION_METADATA_ASSIGNED,
+
+    /** A legal hold was applied to or released from a retention metadata record. */
+    LEGAL_HOLD_APPLIED
 }
