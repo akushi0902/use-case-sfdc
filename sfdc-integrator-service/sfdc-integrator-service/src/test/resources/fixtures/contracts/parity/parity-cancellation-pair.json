@@ -1,0 +1,38 @@
+{
+  "_comment": "Parity case PARITY-C-001: Cancellation — legacy /quickdeploy/stop vs v2 CANCEL operation (WO-153)",
+  "parityCaseId": "PARITY-C-001",
+  "operation": "CANCEL",
+  "legacyRoute": {
+    "method": "POST",
+    "path": "/quickdeploy/stop",
+    "controller": "JobExecutionController",
+    "requestFields": ["deploymentRequestId", "pipelineId"],
+    "requiredFields": [],
+    "request": {
+      "deploymentRequestId": "deploy-req-parity-cancel-001",
+      "pipelineId": "pipeline-parity-cancel-001"
+    }
+  },
+  "v2Route": {
+    "method": "POST",
+    "path": "/api/v2/sfdc/release-jobs",
+    "operationType": "CANCEL",
+    "controller": "ReleaseJobController",
+    "note": "CANCEL is a v2 UNSUPPORTED_OPERATION — returns HTTP 422 UNPROCESSABLE_ENTITY"
+  },
+  "parityStatus": "INTENTIONAL_DIVERGENCE",
+  "intentionalDifferences": [
+    {
+      "aspect": "HTTP_STATUS",
+      "legacyExpected": 200,
+      "v2Expected": 422,
+      "reason": "V2 rejects CANCEL via facade with V2UnsupportedOperationException — cancellation requires a separate v2 cancellation endpoint not yet exposed (tracked as separate WO)"
+    },
+    {
+      "aspect": "RESPONSE_BODY_SHAPE",
+      "legacyExpected": "\"SUCCESS\" (plain text)",
+      "v2Expected": "V2ErrorResponse JSON with errorCode=UNSUPPORTED_OPERATION",
+      "reason": "V2 returns structured error for unsupported operations"
+    }
+  ]
+}

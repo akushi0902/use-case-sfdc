@@ -1,0 +1,59 @@
+{
+  "_comment": "Parity case PARITY-D-001: Deploy — legacy /deploy vs v2 /api/v2/sfdc/release-jobs (WO-153)",
+  "parityCaseId": "PARITY-D-001",
+  "operation": "DEPLOY",
+  "legacyRoute": {
+    "method": "POST",
+    "path": "/deploy",
+    "controller": "SfdcIntegratorController",
+    "requestFields": ["pipelineId", "stepId", "orgUrl"],
+    "requiredFields": [],
+    "request": {
+      "pipelineId": "pipeline-parity-deploy-001",
+      "stepId": "step-deploy-parity-001",
+      "orgUrl": "https://test.salesforce.example.internal"
+    }
+  },
+  "v2Route": {
+    "method": "POST",
+    "path": "/api/v2/sfdc/release-jobs",
+    "controller": "ReleaseJobController",
+    "requestFields": ["operationType", "customerId", "sfdcToolId", "taskId", "pipelineId", "stepId"],
+    "requiredFields": ["operationType", "customerId", "sfdcToolId", "taskId"],
+    "request": {
+      "operationType": "DEPLOY",
+      "customerId": "customer-parity-001",
+      "sfdcToolId": "sfdc-tool-parity-001",
+      "taskId": "step-deploy-parity-001",
+      "pipelineId": "pipeline-parity-deploy-001",
+      "stepId": "step-deploy-parity-001"
+    }
+  },
+  "fieldMapping": {
+    "pipelineId": "pipelineId",
+    "stepId": "taskId + stepId",
+    "NOTE_orgUrl": "NO V2 EQUIVALENT — intentional omission: worker pods receive Salesforce credentials via managed secrets injection, not request payload",
+    "NOTE_operationType": "INFERRED from route (/deploy) in legacy; EXPLICIT (DEPLOY) in v2"
+  },
+  "parityStatus": "COEXISTING",
+  "intentionalDifferences": [
+    {
+      "aspect": "HTTP_STATUS",
+      "legacyExpected": 200,
+      "v2Expected": 202,
+      "reason": "V2 returns HTTP 202 Accepted"
+    },
+    {
+      "aspect": "RESPONSE_BODY_SHAPE",
+      "legacyExpected": "\"SUCCESS\" (plain text)",
+      "v2Expected": "AcceptedAcknowledgement JSON",
+      "reason": "V2 typed acknowledgement"
+    },
+    {
+      "aspect": "ORG_URL_FIELD",
+      "legacyExpected": "orgUrl in request payload",
+      "v2Expected": "absent — Salesforce credentials injected via managed secrets",
+      "reason": "Credential-like endpoint URL removed from payload boundary to reduce risk of accidental logging"
+    }
+  ]
+}

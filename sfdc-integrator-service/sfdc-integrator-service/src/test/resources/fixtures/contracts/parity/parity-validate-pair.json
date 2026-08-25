@@ -1,0 +1,65 @@
+{
+  "_comment": "Parity case PARITY-V-001: Validate — legacy /validate vs v2 /api/v2/sfdc/release-jobs (WO-153)",
+  "parityCaseId": "PARITY-V-001",
+  "operation": "VALIDATE",
+  "legacyRoute": {
+    "method": "POST",
+    "path": "/validate",
+    "controller": "SfdcIntegratorController",
+    "requestFields": ["pipelineId", "stepId", "orgUrl"],
+    "requiredFields": [],
+    "request": {
+      "pipelineId": "pipeline-parity-validate-001",
+      "stepId": "step-validate-parity-001",
+      "orgUrl": "https://test.salesforce.example.internal"
+    }
+  },
+  "v2Route": {
+    "method": "POST",
+    "path": "/api/v2/sfdc/release-jobs",
+    "controller": "ReleaseJobController",
+    "requestFields": ["operationType", "customerId", "sfdcToolId", "taskId", "pipelineId", "stepId"],
+    "requiredFields": ["operationType", "customerId", "sfdcToolId", "taskId"],
+    "request": {
+      "operationType": "VALIDATE",
+      "customerId": "customer-parity-001",
+      "sfdcToolId": "sfdc-tool-parity-001",
+      "taskId": "step-validate-parity-001",
+      "pipelineId": "pipeline-parity-validate-001",
+      "stepId": "step-validate-parity-001"
+    }
+  },
+  "fieldMapping": {
+    "pipelineId": "pipelineId",
+    "stepId": "taskId + stepId",
+    "NOTE_orgUrl": "NO V2 EQUIVALENT — intentional omission: worker pods receive Salesforce credentials via managed secrets injection, not request payload",
+    "NOTE_operationType": "INFERRED from route (/validate → VALIDATE) in legacy; EXPLICIT (VALIDATE) in v2"
+  },
+  "parityStatus": "COEXISTING",
+  "intentionalDifferences": [
+    {
+      "aspect": "HTTP_STATUS",
+      "legacyExpected": 200,
+      "v2Expected": 202,
+      "reason": "V2 returns HTTP 202 Accepted for asynchronous commands (improved contract)"
+    },
+    {
+      "aspect": "RESPONSE_BODY_SHAPE",
+      "legacyExpected": "\"SUCCESS\" (plain text)",
+      "v2Expected": "AcceptedAcknowledgement JSON with jobId, statusUrl, correlationId, operationType, state, acceptedAt",
+      "reason": "V2 typed acknowledgement"
+    },
+    {
+      "aspect": "LOCATION_HEADER",
+      "legacyExpected": "absent",
+      "v2Expected": "/api/v2/sfdc/release-jobs/{jobId}/status",
+      "reason": "V2 provides a durable status URL so callers can poll job progress (improved contract)"
+    },
+    {
+      "aspect": "ORG_URL_FIELD",
+      "legacyExpected": "orgUrl in request payload",
+      "v2Expected": "absent — Salesforce credentials injected via managed secrets",
+      "reason": "Credential-like endpoint URL removed from payload boundary to reduce risk of accidental logging"
+    }
+  ]
+}
