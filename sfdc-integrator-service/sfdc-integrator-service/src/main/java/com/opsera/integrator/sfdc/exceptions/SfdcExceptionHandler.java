@@ -158,6 +158,17 @@ public class SfdcExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
+    @ExceptionHandler(JobNotCancellableException.class)
+    public ResponseEntity<ErrorResponse> handleJobNotCancellable(JobNotCancellableException ex) {
+        String correlationId = ex.getCorrelationId() != null ? ex.getCorrelationId() : getCorrelationId();
+        log.warn("Cancellation rejected — job in terminal state: correlationId={}, jobId={}, currentState={}",
+                correlationId, ex.getJobId(), ex.getCurrentState());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(correlationId, "JOB_NOT_CANCELLABLE",
+                        "Job cannot be cancelled because it is in a terminal state: " + ex.getCurrentState(),
+                        "No action is required. The job has already reached a terminal state."));
+    }
+
     @ExceptionHandler(LifecyclePersistenceException.class)
     public ResponseEntity<ErrorResponse> handleLifecyclePersistence(LifecyclePersistenceException ex) {
         String correlationId = getCorrelationId();

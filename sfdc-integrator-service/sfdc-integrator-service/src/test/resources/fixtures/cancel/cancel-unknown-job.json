@@ -1,0 +1,4 @@
+{
+  "_comment": "Cancellation request for an unknown job identifier — should return 404",
+  "safeReason": "Testing unknown job cancellation"
+}

@@ -1,0 +1,4 @@
+{
+  "_comment": "Cancellation request for a terminal (COMPLETED) job — should return 409",
+  "safeReason": "Attempting to cancel completed job"
+}

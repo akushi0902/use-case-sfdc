@@ -1,0 +1,4 @@
+{
+  "_comment": "Cancellation request for an active validation job",
+  "safeReason": "Cancelling validation — branch was updated before scan completed"
+}

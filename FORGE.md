@@ -343,3 +343,10 @@
 - **Files:** 13 (+865/-1)
 - **Duration:** 366ss
 - **Approach:** Added a dedicated POST /api/v2/sfdc/release-jobs/validate endpoint to the existing ReleaseJobController, following the identical pattern established by WO-146 (quick-deploy) and WO-147 (deploy). Created ValidationSubmissionRequest DTO with customerId, sfdcToolId, taskId, targetOrgId as required @NotBlank fields and optional repositoryId, branch, packageId, validationMode for prevalidation context. Created ValidationSubmissionAdapter @Component that maps the DTO to ReleaseCommandRequest (always operationType=VALIDATE) with deterministic taskId-over-gitTaskId resolution and a collectPrevalidationWarnings() method generating safe allow-listed strings when source control or package context is absent. The controller calls prevalidation before facade.accept() and adds non-empty warnings to AcceptedAcknowledgement.safeWarnings. Legacy SfdcIntegratorController at /validate is completely untouched. All five existing @WebMvcTest test classes updated with @MockBean ValidationSubmissionAdapter.
+
+## WO-149: User Story: WO-149 - Standardize Release Job Cancellation
+- **Status:** completed
+- **Commit:** `81c32ad`
+- **Files:** 11 (+708/-0)
+- **Duration:** 505ss
+- **Approach:** Added POST /api/v2/sfdc/jobs/{jobId}/cancel as a new ReleaseJobCancellationController (separate from ReleaseJobController since the base path differs). State-machine logic: validate jobId format → 400, job not found → 404, already CANCELLED → idempotent 202, other terminal state → JobNotCancellableException → 409, active state → lifecycleService.markCancelled() → 202. CancellationRequest (optional body, safeReason + clientCorrelationId) and CancellationAcknowledgement DTOs created. JobNotCancellableException added; SfdcExceptionHandler extended with @ExceptionHandler for it returning HTTP 409 with JOB_NOT_CANCELLABLE errorCode. Legacy /quickdeploy/stop route untouched.
