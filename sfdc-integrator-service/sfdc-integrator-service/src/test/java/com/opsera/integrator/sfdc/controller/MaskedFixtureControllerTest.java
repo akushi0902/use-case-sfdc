@@ -10,6 +10,7 @@ import com.opsera.integrator.sfdc.logging.SafeLogEvent;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.DataMigrationRequest;
 import com.opsera.integrator.sfdc.model.PostRefreshRequest;
+import com.opsera.integrator.sfdc.service.DataDictionaryService;
 import com.opsera.integrator.sfdc.service.DataMigrationService;
 import com.opsera.integrator.sfdc.service.PostRefreshTaskService;
 import org.junit.jupiter.api.DisplayName;
@@ -70,6 +71,9 @@ class MaskedFixtureControllerTest {
 
         @MockBean
         private RetentionMetadataService retentionMetadataService;
+
+        @MockBean
+        private DataDictionaryService dataDictionaryService;
 
         @Test
         @DisplayName("POST /datamigration: safe log event contains pipelineId and stepId")

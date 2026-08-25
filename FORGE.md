@@ -210,3 +210,10 @@
 - **Files:** 25 (+1611/-11)
 - **Duration:** 609ss
 - **Approach:** Created governance/retention package with 10 domain types (RetentionCategory, PurgeEligibilityStatus, RetentionPolicy, RetentionPolicyProperties, RetentionPolicyResolver, RetentionMetadata, RetentionMetadataRepository, JdbcRetentionMetadataRepository, RetentionMetadataService, RetentionAssignmentException). Policy resolution uses injectable Clock for deterministic expiration. Legal hold always overrides ELIGIBLE. RETENTION_METADATA_ASSIGNED and LEGAL_HOLD_APPLIED audit events emitted. V4 migration ALTERs job_retention_metadata with 6 new columns and 5 indexes. RetentionMetadataService wired into DataMigrationController as representative governed path (assign before service call, legacy response unchanged). RETENTION_RECORD added to AuditResourceType; new audit keys added to SafeAuditMetadata allow-list.
+
+## WO-126: User Story: WO-126 - Preserve Data Migration Compatibility Contracts
+- **Status:** completed
+- **Commit:** `eb345a7`
+- **Files:** 14 (+766/-5)
+- **Duration:** 631ss
+- **Approach:** Inventoried DataMigrationController (had only POST /datamigration after prior modernization WOs). Added 10 legacy stub routes and DataDictionaryService interface as minimal seams required for characterization coverage. DataMigrationService extended with 10 new methods. All new routes delegate directly to service with no additional governance overhead (legacy stubs). /validate/migration-entities and /generate/data-dictionary return ACCEPTED as checkpoint-style acknowledgements; all other routes return SUCCESS. Created DataMigrationControllerCompatibilityTest with 12 @Nested subclasses (one per route) using @WebMvcTest + mocked services, fixture-based inputs, and ArgumentCaptor delegation assertions. Exception path tests verify HTTP 500 + INTERNAL_ERROR errorCode without exposing service detail. Added @MockBean DataDictionaryService to DataMigrationControllerTest and MaskedFixtureControllerTest to prevent injection failures.

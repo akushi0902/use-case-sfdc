@@ -11,6 +11,7 @@ import com.opsera.integrator.sfdc.governance.classification.DataClassification;
 import com.opsera.integrator.sfdc.governance.classification.GovernanceDataCategory;
 import com.opsera.integrator.sfdc.governance.classification.RetentionCategoryHint;
 import com.opsera.integrator.sfdc.model.DataMigrationRequest;
+import com.opsera.integrator.sfdc.service.DataDictionaryService;
 import com.opsera.integrator.sfdc.service.DataMigrationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +58,9 @@ class DataMigrationControllerTest {
 
     @MockBean
     private RetentionMetadataService retentionMetadataService;
+
+    @MockBean
+    private DataDictionaryService dataDictionaryService;
 
     @Test
     void migrate_validRequest_returns200Success() throws Exception {

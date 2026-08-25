@@ -1,0 +1,7 @@
+{
+  "_comment": "Sanitized fixture for data dictionary generation compatibility test. Uses example.internal placeholder URLs only.",
+  "pipelineId": "pipeline-fixture-dict-compat-001",
+  "stepId": "step-fixture-dict-compat-001",
+  "sourceOrgUrl": "https://source.fixture.example.internal",
+  "targetOrgUrl": "https://target.fixture.example.internal"
+}
