@@ -329,3 +329,10 @@
 - **Files:** 11 (+705/-1)
 - **Duration:** 438ss
 - **Approach:** Added a dedicated POST /api/v2/sfdc/release-jobs/quick-deploy endpoint to the existing ReleaseJobController by adding a new @PostMapping('/quick-deploy') method. Created QuickDeploySubmissionRequest DTO with deployRequestId, customerId, sfdcToolId, taskId as required @NotBlank fields. Created QuickDeploySubmissionAdapter @Component that maps the DTO to the existing ReleaseCommandRequest (always setting operationType=QUICK_DEPLOY) with deterministic taskId precedence over gitTaskId fallback. The new endpoint reuses the existing ReleaseCommandFacade and V2ReleaseRoutesProperties gates, returning HTTP 202/422/400 consistently with the general release endpoint. Legacy POST /quickdeploy is untouched. Existing controller tests updated with @MockBean for QuickDeploySubmissionAdapter.
+
+## WO-147: User Story: WO-147 - Add Deployment V2 Submission
+- **Status:** completed
+- **Commit:** `3e59620`
+- **Files:** 12 (+791/-1)
+- **Duration:** 567ss
+- **Approach:** Added a dedicated POST /api/v2/sfdc/release-jobs/deploy endpoint to the existing ReleaseJobController by adding a new @PostMapping('/deploy') method. Created DeploymentSubmissionRequest DTO with customerId, sfdcToolId, taskId as required @NotBlank fields and optional repositoryId, branch, packageId for prevalidation context. Created DeploymentSubmissionAdapter @Component that maps the DTO to ReleaseCommandRequest (always operationType=DEPLOY) with deterministic taskId-over-gitTaskId resolution, and a collectPrevalidationWarnings() method that generates safe, allow-listed warning strings when source control or package context is absent. The controller calls collectPrevalidationWarnings() before facade.accept() and adds non-empty warnings to the AcceptedAcknowledgement response (which already supports safeWarnings). Legacy SfdcIntegratorController at /deploy is completely untouched. All four existing @WebMvcTest test classes updated with @MockBean DeploymentSubmissionAdapter.

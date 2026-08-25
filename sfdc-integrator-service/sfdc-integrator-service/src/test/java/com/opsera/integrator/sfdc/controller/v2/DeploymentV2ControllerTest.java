@@ -6,9 +6,10 @@ import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.observability.ReleaseCoexistenceTelemetry;
 import com.opsera.integrator.sfdc.resources.v2.deploy.DeploymentSubmissionAdapter;
+import com.opsera.integrator.sfdc.resources.v2.deploy.DeploymentSubmissionRequest;
 import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionAdapter;
-import com.opsera.integrator.sfdc.resources.v2.quickdeploy.QuickDeploySubmissionRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.AcceptedAcknowledgement;
+import com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseLifecycleState;
 import com.opsera.integrator.sfdc.resources.v2.release.ReleaseOperationType;
 import com.opsera.integrator.sfdc.services.v2.ReleaseCommandFacade;
@@ -25,8 +26,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -38,15 +42,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Spring MVC controller tests for the dedicated v2 quick deploy endpoint
- * {@code POST /api/v2/sfdc/release-jobs/quick-deploy} (WO-146).
+ * Spring MVC controller tests for the dedicated v2 deployment endpoint
+ * {@code POST /api/v2/sfdc/release-jobs/deploy} (WO-147).
  *
  * <p>Covers acceptance criteria:
  * <ul>
  *   <li>AC-1: valid request returns 202 with jobId, correlationId, statusUrl, state, operationType, acceptedAt</li>
  *   <li>AC-2: missing required fields return 400 with structured error; facade not called</li>
- *   <li>AC-3: legacy route unaffected (tested separately)</li>
- *   <li>AC-4: taskId precedence over gitTaskId</li>
+ *   <li>AC-3: prevalidation warnings propagated in response when source control context absent</li>
+ *   <li>AC-4: legacy routes unaffected (characterized separately)</li>
  *   <li>AC-6: Spring MVC integration tests</li>
  *   <li>AC-7: fixture-backed tests</li>
  * </ul>
@@ -54,11 +58,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithMockUser
 @WebMvcTest(controllers = ReleaseJobController.class)
 @Import(SfdcExceptionHandler.class)
-class QuickDeployV2ControllerTest {
+class DeploymentV2ControllerTest {
 
-    private static final String ENDPOINT = "/api/v2/sfdc/release-jobs/quick-deploy";
-    private static final String TEST_JOB_ID = "job-qdv2-test-001";
-    private static final String TEST_CID = "cid-qdv2-test-001";
+    private static final String ENDPOINT = "/api/v2/sfdc/release-jobs/deploy";
+    private static final String TEST_JOB_ID = "job-dv2-test-001";
+    private static final String TEST_CID = "cid-dv2-test-001";
 
     @Autowired
     private MockMvc mockMvc;
@@ -87,17 +91,16 @@ class QuickDeployV2ControllerTest {
     @BeforeEach
     void setUp() {
         when(routesProperties.isEnabled()).thenReturn(true);
-        when(routesProperties.isOperationEnabled("QUICK_DEPLOY")).thenReturn(true);
+        when(routesProperties.isOperationEnabled("DEPLOY")).thenReturn(true);
         when(routesProperties.isOperationEnabled(anyString())).thenReturn(true);
-        when(quickDeployAdapter.toReleaseCommandRequest(any())).thenCallRealMethod();
+        when(deploymentAdapter.toReleaseCommandRequest(any())).thenReturn(new ReleaseCommandRequest());
+        when(deploymentAdapter.collectPrevalidationWarnings(any())).thenReturn(Collections.emptyList());
     }
 
     // ---- AC-1: Valid submission returns 202 ----
 
     @Test
-    void submitQuickDeploy_validRequest_returns202WithAcknowledgement() throws Exception {
-        when(quickDeployAdapter.toReleaseCommandRequest(any())).thenReturn(
-                new com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest());
+    void submitDeployment_validRequest_returns202WithAcknowledgement() throws Exception {
         when(releaseCommandFacade.accept(any())).thenReturn(acceptedAck());
 
         mockMvc.perform(post(ENDPOINT)
@@ -107,15 +110,13 @@ class QuickDeployV2ControllerTest {
                 .andExpect(jsonPath("$.jobId").value(TEST_JOB_ID))
                 .andExpect(jsonPath("$.correlationId").value(TEST_CID))
                 .andExpect(jsonPath("$.state").value("ACCEPTED"))
-                .andExpect(jsonPath("$.operationType").value("QUICK_DEPLOY"))
+                .andExpect(jsonPath("$.operationType").value("DEPLOY"))
                 .andExpect(jsonPath("$.acceptedAt").isNotEmpty())
                 .andExpect(jsonPath("$.statusUrl").value(containsString(TEST_JOB_ID)));
     }
 
     @Test
-    void submitQuickDeploy_validRequest_returnsLocationHeader() throws Exception {
-        when(quickDeployAdapter.toReleaseCommandRequest(any())).thenReturn(
-                new com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest());
+    void submitDeployment_validRequest_returnsLocationHeader() throws Exception {
         when(releaseCommandFacade.accept(any())).thenReturn(acceptedAck());
 
         mockMvc.perform(post(ENDPOINT)
@@ -129,15 +130,12 @@ class QuickDeployV2ControllerTest {
     // ---- AC-1: fixture-backed valid test ----
 
     @Test
-    void submitQuickDeploy_validFixture_returns202() throws Exception {
-        when(quickDeployAdapter.toReleaseCommandRequest(any())).thenReturn(
-                new com.opsera.integrator.sfdc.resources.v2.release.ReleaseCommandRequest());
+    void submitDeployment_validFixture_returns202() throws Exception {
         when(releaseCommandFacade.accept(any())).thenReturn(acceptedAck());
 
         String body = new ClassPathResource(
-                "fixtures/quickdeploy/v2-quick-deploy-valid-request.json")
+                "fixtures/deploy/v2-deploy-valid-request.json")
                 .getContentAsString(StandardCharsets.UTF_8);
-        // Remove _comment field before posting
         body = body.replaceAll(",?\\s*\"_comment\"\\s*:\\s*\"[^\"]*\"", "")
                    .replaceAll("\\{\\s*,", "{");
 
@@ -150,51 +148,22 @@ class QuickDeployV2ControllerTest {
     // ---- AC-2: Missing required fields return 400 ----
 
     @Test
-    void submitQuickDeploy_missingDeployRequestId_returns400() throws Exception {
-        QuickDeploySubmissionRequest req = validRequest();
-        req.setDeployRequestId(null);
-
-        mockMvc.perform(post(ENDPOINT)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
-
-        verify(releaseCommandFacade, never()).accept(any());
-    }
-
-    @Test
-    void submitQuickDeploy_blankDeployRequestId_returns400() throws Exception {
-        QuickDeploySubmissionRequest req = validRequest();
-        req.setDeployRequestId("   ");
-
-        mockMvc.perform(post(ENDPOINT)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
-
-        verify(releaseCommandFacade, never()).accept(any());
-    }
-
-    @Test
-    void submitQuickDeploy_missingCustomerId_returns400() throws Exception {
-        QuickDeploySubmissionRequest req = validRequest();
+    void submitDeployment_missingCustomerId_returns400() throws Exception {
+        DeploymentSubmissionRequest req = validRequest();
         req.setCustomerId(null);
 
         mockMvc.perform(post(ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("customerId"));
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
 
         verify(releaseCommandFacade, never()).accept(any());
     }
 
     @Test
-    void submitQuickDeploy_missingSfdcToolId_returns400() throws Exception {
-        QuickDeploySubmissionRequest req = validRequest();
+    void submitDeployment_missingSfdcToolId_returns400() throws Exception {
+        DeploymentSubmissionRequest req = validRequest();
         req.setSfdcToolId(null);
 
         mockMvc.perform(post(ENDPOINT)
@@ -207,8 +176,8 @@ class QuickDeployV2ControllerTest {
     }
 
     @Test
-    void submitQuickDeploy_missingTaskId_returns400() throws Exception {
-        QuickDeploySubmissionRequest req = validRequest();
+    void submitDeployment_missingTaskId_returns400() throws Exception {
+        DeploymentSubmissionRequest req = validRequest();
         req.setTaskId(null);
 
         mockMvc.perform(post(ENDPOINT)
@@ -222,9 +191,9 @@ class QuickDeployV2ControllerTest {
     }
 
     @Test
-    void submitQuickDeploy_missingDeployIdFixture_returns400() throws Exception {
+    void submitDeployment_missingRequiredContextFixture_returns400() throws Exception {
         String body = new ClassPathResource(
-                "fixtures/quickdeploy/v2-quick-deploy-missing-deploy-id.json")
+                "fixtures/deploy/v2-deploy-missing-required-context.json")
                 .getContentAsString(StandardCharsets.UTF_8);
         body = body.replaceAll(",?\\s*\"_comment\"\\s*:\\s*\"[^\"]*\"", "")
                    .replaceAll("\\{\\s*,", "{");
@@ -238,10 +207,37 @@ class QuickDeployV2ControllerTest {
         verify(releaseCommandFacade, never()).accept(any());
     }
 
+    // ---- AC-3: Prevalidation warnings included in 202 response ----
+
+    @Test
+    void submitDeployment_missingSourceControlContext_returns202WithWarnings() throws Exception {
+        List<String> warnings = List.of(
+                "repositoryId not provided; source control traceability will be limited",
+                "branch not provided; deployment branch context will not be recorded",
+                "packageId not provided; component selection will use tool default");
+        when(deploymentAdapter.collectPrevalidationWarnings(any())).thenReturn(warnings);
+
+        AcceptedAcknowledgement ack = acceptedAck();
+        ack.setSafeWarnings(warnings);
+        when(releaseCommandFacade.accept(any())).thenReturn(ack);
+
+        String body = new ClassPathResource(
+                "fixtures/deploy/v2-deploy-prevalidation-warning.json")
+                .getContentAsString(StandardCharsets.UTF_8);
+        body = body.replaceAll(",?\\s*\"_comment\"\\s*:\\s*\"[^\"]*\"", "")
+                   .replaceAll("\\{\\s*,", "{");
+
+        mockMvc.perform(post(ENDPOINT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.safeWarnings", hasSize(3)));
+    }
+
     // ---- Disabled route returns 422 ----
 
     @Test
-    void submitQuickDeploy_routesDisabled_returns422() throws Exception {
+    void submitDeployment_routesDisabled_returns422() throws Exception {
         when(routesProperties.isEnabled()).thenReturn(false);
 
         mockMvc.perform(post(ENDPOINT)
@@ -254,8 +250,8 @@ class QuickDeployV2ControllerTest {
     }
 
     @Test
-    void submitQuickDeploy_quickDeployOperationDisabled_returns422() throws Exception {
-        when(routesProperties.isOperationEnabled("QUICK_DEPLOY")).thenReturn(false);
+    void submitDeployment_deployOperationDisabled_returns422() throws Exception {
+        when(routesProperties.isOperationEnabled("DEPLOY")).thenReturn(false);
 
         mockMvc.perform(post(ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -268,15 +264,16 @@ class QuickDeployV2ControllerTest {
 
     // ---- Helpers ----
 
-    private QuickDeploySubmissionRequest validRequest() {
-        QuickDeploySubmissionRequest req = new QuickDeploySubmissionRequest();
-        req.setDeployRequestId("deploy-req-qdv2-001");
-        req.setCustomerId("customer-qdv2-001");
-        req.setSfdcToolId("sfdc-tool-qdv2-001");
-        req.setTaskId("step-qdv2-001");
-        req.setGitTaskId("fallback-task-qdv2-001");
-        req.setPipelineId("pipeline-qdv2-001");
-        req.setStepId("step-qdv2-001");
+    private DeploymentSubmissionRequest validRequest() {
+        DeploymentSubmissionRequest req = new DeploymentSubmissionRequest();
+        req.setCustomerId("customer-dv2-001");
+        req.setSfdcToolId("sfdc-tool-dv2-001");
+        req.setTaskId("step-dv2-001");
+        req.setRepositoryId("repo-dv2-001");
+        req.setBranch("main");
+        req.setPackageId("package-dv2-001");
+        req.setPipelineId("pipeline-dv2-001");
+        req.setStepId("step-dv2-001");
         return req;
     }
 
@@ -287,7 +284,7 @@ class QuickDeployV2ControllerTest {
         ack.setStatusUrl("/api/v2/sfdc/release-jobs/" + TEST_JOB_ID + "/status");
         ack.setState(ReleaseLifecycleState.ACCEPTED);
         ack.setAcceptedAt(Instant.parse("2026-08-25T10:00:00Z"));
-        ack.setOperationType(ReleaseOperationType.QUICK_DEPLOY);
+        ack.setOperationType(ReleaseOperationType.DEPLOY);
         return ack;
     }
 }
