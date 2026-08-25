@@ -9,6 +9,7 @@ import com.opsera.integrator.sfdc.logging.SafeStructuredLogger;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
 import com.opsera.integrator.sfdc.observability.TraceContextPropagation;
+import com.opsera.integrator.sfdc.observability.metrics.ReleaseLifecycleMetrics;
 import com.opsera.integrator.sfdc.security.ShellArgumentValidator;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,6 +73,9 @@ class JobExecutionControllerTraceContextTest {
 
     @MockBean
     private TraceContextPropagation traceContextPropagation;
+
+    @MockBean
+    private ReleaseLifecycleMetrics releaseLifecycleMetrics;
 
     @BeforeEach
     void stubTracing() {

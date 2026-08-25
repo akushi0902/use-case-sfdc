@@ -1,0 +1,19 @@
+{
+  "_comment": "Bounded metric names for sfdc.release lifecycle observability (WO-145). Used to verify metric registration in unit tests.",
+  "counters": [
+    "sfdc.release.acceptance.attempts",
+    "sfdc.release.validation.rejections",
+    "sfdc.release.cancellation.attempts",
+    "sfdc.release.dispatch.failures"
+  ],
+  "timers": [
+    "sfdc.release.execution.duration"
+  ],
+  "gauges": [
+    "sfdc.release.active.workflows"
+  ],
+  "boundedTagKeys": ["operation", "outcome", "exception_category"],
+  "boundedOperationValues": ["QUICK_DEPLOY", "QUICK_DEPLOY_STOP"],
+  "boundedOutcomeValues": ["accepted", "rejected", "dispatched", "failed", "cancelled"],
+  "boundedExceptionCategoryValues": ["validation", "authorization", "dispatch", "unknown"]
+}

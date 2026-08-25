@@ -14,6 +14,7 @@ import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
 import com.opsera.integrator.sfdc.observability.SafeTraceAttributes;
 import com.opsera.integrator.sfdc.observability.TraceContextPropagation;
+import com.opsera.integrator.sfdc.observability.metrics.ReleaseLifecycleMetrics;
 import com.opsera.integrator.sfdc.security.CallerContextResolver;
 import com.opsera.integrator.sfdc.security.ScopeAuthorizer;
 import com.opsera.integrator.sfdc.security.ScopeConstants;
@@ -59,6 +60,7 @@ public class JobExecutionController {
     private final CallerContextResolver callerContextResolver;
     private final ScopeAuthorizer scopeAuthorizer;
     private final TraceContextPropagation traceContextPropagation;
+    private final ReleaseLifecycleMetrics releaseLifecycleMetrics;
 
     public JobExecutionController(QuickDeployService quickDeployService,
                                    ClassificationPolicyResolver classificationResolver,
@@ -67,7 +69,8 @@ public class JobExecutionController {
                                    ShellArgumentValidator shellArgumentValidator,
                                    CallerContextResolver callerContextResolver,
                                    ScopeAuthorizer scopeAuthorizer,
-                                   TraceContextPropagation traceContextPropagation) {
+                                   TraceContextPropagation traceContextPropagation,
+                                   ReleaseLifecycleMetrics releaseLifecycleMetrics) {
         this.quickDeployService = quickDeployService;
         this.classificationResolver = classificationResolver;
         this.safeLogger = safeLogger;
@@ -76,6 +79,7 @@ public class JobExecutionController {
         this.callerContextResolver = callerContextResolver;
         this.scopeAuthorizer = scopeAuthorizer;
         this.traceContextPropagation = traceContextPropagation;
+        this.releaseLifecycleMetrics = releaseLifecycleMetrics;
     }
 
     /**
@@ -88,6 +92,7 @@ public class JobExecutionController {
     public ResponseEntity<String> startQuickDeploy(@Valid @RequestBody QuickDeployRequest request,
                                                     Authentication authentication) {
         String correlationId = MDC.get(CorrelationIdConstants.MDC_KEY);
+        long startNanos = System.nanoTime();
 
         try (TraceContextPropagation.SpanInScope span =
                      traceContextPropagation.startSpan(SafeTraceAttributes.OP_QUICK_DEPLOY_START)) {
@@ -148,11 +153,20 @@ public class JobExecutionController {
                         "JobExecutionController.startQuickDeploy");
 
                 span.tag(SafeTraceAttributes.ATTR_OUTCOME, SafeTraceAttributes.OUTCOME_ACCEPTED);
+                releaseLifecycleMetrics.recordAcceptanceAttempt(
+                        ReleaseLifecycleMetrics.OP_QUICK_DEPLOY, ReleaseLifecycleMetrics.OUTCOME_ACCEPTED);
+                releaseLifecycleMetrics.recordExecutionDuration(
+                        System.nanoTime() - startNanos, ReleaseLifecycleMetrics.OP_QUICK_DEPLOY, ReleaseLifecycleMetrics.OUTCOME_ACCEPTED);
                 return ResponseEntity.ok(SUCCESS);
             } catch (Exception e) {
                 span.tag(SafeTraceAttributes.ATTR_LIFECYCLE_PHASE, SafeTraceAttributes.PHASE_EXCEPTION)
                     .tag(SafeTraceAttributes.ATTR_OUTCOME, SafeTraceAttributes.OUTCOME_ERROR)
                     .error(e);
+                releaseLifecycleMetrics.recordAcceptanceAttempt(
+                        ReleaseLifecycleMetrics.OP_QUICK_DEPLOY, ReleaseLifecycleMetrics.OUTCOME_REJECTED);
+                releaseLifecycleMetrics.recordDispatchFailure(
+                        ReleaseLifecycleMetrics.OP_QUICK_DEPLOY,
+                        classifyException(e));
                 throw e;
             }
         }
@@ -213,13 +227,33 @@ public class JobExecutionController {
                         "JobExecutionController.stopQuickDeploy");
 
                 span.tag(SafeTraceAttributes.ATTR_OUTCOME, SafeTraceAttributes.OUTCOME_ACCEPTED);
+                releaseLifecycleMetrics.recordCancellationAttempt(ReleaseLifecycleMetrics.OUTCOME_CANCELLED);
                 return ResponseEntity.ok(SUCCESS);
             } catch (Exception e) {
                 span.tag(SafeTraceAttributes.ATTR_LIFECYCLE_PHASE, SafeTraceAttributes.PHASE_EXCEPTION)
                     .tag(SafeTraceAttributes.ATTR_OUTCOME, SafeTraceAttributes.OUTCOME_ERROR)
                     .error(e);
+                releaseLifecycleMetrics.recordCancellationAttempt(ReleaseLifecycleMetrics.OUTCOME_FAILED);
                 throw e;
             }
         }
+    }
+
+    private static String classifyException(Exception e) {
+        if (e == null) {
+            return ReleaseLifecycleMetrics.EX_CATEGORY_UNKNOWN;
+        }
+        String className = e.getClass().getSimpleName().toLowerCase();
+        if (className.contains("validation") || className.contains("constraint") || className.contains("shell")) {
+            return ReleaseLifecycleMetrics.EX_CATEGORY_VALIDATION;
+        }
+        if (className.contains("access") || className.contains("auth") || className.contains("scope")
+                || className.contains("forbidden") || className.contains("unauthorized")) {
+            return ReleaseLifecycleMetrics.EX_CATEGORY_AUTHORIZATION;
+        }
+        if (className.contains("dispatch") || className.contains("messaging") || className.contains("kafka")) {
+            return ReleaseLifecycleMetrics.EX_CATEGORY_DISPATCH;
+        }
+        return ReleaseLifecycleMetrics.EX_CATEGORY_UNKNOWN;
     }
 }

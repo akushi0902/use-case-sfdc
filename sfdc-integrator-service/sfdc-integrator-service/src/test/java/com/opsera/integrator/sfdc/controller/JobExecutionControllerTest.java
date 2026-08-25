@@ -3,6 +3,7 @@ package com.opsera.integrator.sfdc.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
 import com.opsera.integrator.sfdc.observability.TraceContextPropagation;
+import com.opsera.integrator.sfdc.observability.metrics.ReleaseLifecycleMetrics;
 import com.opsera.integrator.sfdc.governance.audit.AuditEventWriter;
 import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
@@ -74,6 +75,9 @@ class JobExecutionControllerTest {
 
     @MockBean
     private TraceContextPropagation traceContextPropagation;
+
+    @MockBean
+    private ReleaseLifecycleMetrics releaseLifecycleMetrics;
 
     @BeforeEach
     void stubTracing() {

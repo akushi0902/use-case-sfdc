@@ -364,3 +364,10 @@
 - **Files:** 18 (+898/-83)
 - **Duration:** 918ss
 - **Approach:** Added Micrometer OpenTelemetry tracing to the release-critical quick-deploy controller path. Created SafeTraceAttributes as an allow-list guard for span attribute keys, and TraceContextPropagation as a Spring component wrapping Micrometer Tracer with graceful NOOP degradation when the OTLP collector is unavailable. Instrumented JobExecutionController.startQuickDeploy and stopQuickDeploy with spans covering request-received, validation, dispatch, cancellation, and exception phases. Updated all 7 existing @WebMvcTest controller tests to mock TraceContextPropagation and stub startSpan() to return NOOP, preserving all legacy response contracts. Added 12 SafeTraceAttributes unit tests, 14 TraceContextPropagation unit tests using SimpleTracer, and 6 MockMvc integration tests for correlation header behavior.
+
+## WO-145: User Story: WO-145 - Expose Lifecycle Metrics And Health
+- **Status:** completed
+- **Commit:** `ce5ae55`
+- **Files:** 21 (+1065/-1)
+- **Duration:** 767ss
+- **Approach:** Added Micrometer-based lifecycle metrics (ReleaseLifecycleMetrics with counters, timer, gauge using bounded low-cardinality tags) and three custom HealthIndicator beans (Kafka connectivity, Hazelcast cluster, job dispatch readiness). Configured Spring Boot Actuator management endpoints in application.yaml exposing /actuator/health and /actuator/metrics with liveness/readiness probe groups. Wired ReleaseLifecycleMetrics into JobExecutionController to record acceptance attempts, execution duration (timer), dispatch failures, and cancellation attempts. Added classifyException helper mapping exception types to bounded exception_category tag values. Updated all 8 @WebMvcTest controller tests with @MockBean ReleaseLifecycleMetrics. Health indicators return UNKNOWN when optional infrastructure beans are absent, so they do not fail the test profile which excludes Kafka and Hazelcast auto-configuration.

@@ -160,6 +160,41 @@ sfdc:
         max-runtime-seconds: 300
 
 management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        # Only health and metrics are exposed. env, beans, heapdump, threaddump,
+        # configprops, and other sensitive endpoints are intentionally excluded.
+        include: "health,metrics"
+  endpoint:
+    health:
+      # show-details=always is safe here because /actuator/* is an internal path
+      # not reachable from outside the pod network. Kubernetes liveness/readiness
+      # probes hit this endpoint directly inside the cluster.
+      show-details: always
+      show-components: always
+      probes:
+        # Enables /actuator/health/liveness and /actuator/health/readiness for Kubernetes.
+        enabled: true
+      group:
+        readiness:
+          # Include custom indicators in the readiness group.
+          # kafkaConnectivity, hazelcastCluster, jobDispatchReadiness must match the
+          # indicator bean names (Spring lower-cases and strips "HealthIndicator" suffix).
+          include: "db,kafkaConnectivity,hazelcastCluster,jobDispatchReadiness"
+          show-details: always
+        liveness:
+          include: "livenessState"
+  metrics:
+    tags:
+      # Common tag applied to all metrics — allows filtering by service in the metrics backend.
+      application: ${spring.application.name:sfdc-integrator-service}
+    distribution:
+      percentiles-histogram:
+        sfdc.release.execution.duration: true
+      slo:
+        sfdc.release.execution.duration: "1ms,10ms,100ms,500ms,1000ms,5000ms"
   tracing:
     sampling:
       # 1.0 = 100% sampling. Override per environment: OTEL_SAMPLING_PROBABILITY=0.1 for production.
