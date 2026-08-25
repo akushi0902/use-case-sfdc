@@ -1,0 +1,17 @@
+{
+  "_comment": "Fixture: job in REJECTED terminal state. Rejected before dispatch due to a policy or capacity check failure. Safe reason code identifies the category; no raw Salesforce payload.",
+  "jobId": "job-fixture-rejected-007",
+  "correlationId": "cid-fixture-rejected-007",
+  "operationType": "QUICK_DEPLOY",
+  "currentState": "REJECTED",
+  "customerIdHash": "e5f6789012345678901234567890abcdef01234567890123456789012345cde5",
+  "sfdcToolId": "sfdc-tool-fixture-001",
+  "pipelineId": "pipeline-fixture-003",
+  "stepId": "step-quick-fixture-007",
+  "dataClassification": "CONFIDENTIAL",
+  "version": 1,
+  "diagnostic": {
+    "safeSummary": "Job rejected: duplicate deploy request detected for the same pipeline step",
+    "errorCode": "DUPLICATE_REQUEST"
+  }
+}
