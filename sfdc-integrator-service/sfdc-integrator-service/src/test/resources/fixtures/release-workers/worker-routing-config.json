@@ -1,0 +1,23 @@
+{
+  "_comment": "Routing configuration fixture documenting worker dispatch flags for all P0 command types (WO-152 AC-1, AC-3)",
+  "routingFlags": {
+    "masterSwitch": "sfdc.worker-dispatch.enabled",
+    "commandTypes": {
+      "QUICK_DEPLOY": "sfdc.worker-dispatch.command-types.QUICK_DEPLOY",
+      "DEPLOY": "sfdc.worker-dispatch.command-types.DEPLOY",
+      "VALIDATE": "sfdc.worker-dispatch.command-types.VALIDATE",
+      "CANCEL": "sfdc.worker-dispatch.command-types.CANCEL"
+    },
+    "timeoutSeconds": "sfdc.worker-dispatch.timeout-seconds"
+  },
+  "defaultValues": {
+    "masterSwitch": false,
+    "QUICK_DEPLOY": false,
+    "DEPLOY": false,
+    "VALIDATE": false,
+    "CANCEL": false,
+    "timeoutSeconds": 1800
+  },
+  "canaryRolloutOrder": ["QUICK_DEPLOY", "DEPLOY", "VALIDATE"],
+  "_note": "Set masterSwitch=true AND the specific command type flag=true to canary one operation at a time. CANCEL should not be enabled before the originating operation is canary-verified."
+}

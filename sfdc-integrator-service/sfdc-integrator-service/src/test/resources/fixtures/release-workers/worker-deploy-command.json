@@ -1,0 +1,13 @@
+{
+  "_comment": "Worker dispatch command fixture for DEPLOY operation (WO-152)",
+  "operationType": "DEPLOY",
+  "correlationId": "corr-deploy-worker-001",
+  "idempotencyKey": "idempotency-deploy-worker-001",
+  "pipelineId": "pipeline-worker-deploy-001",
+  "stepId": "step-worker-deploy-001",
+  "sfdcToolId": "sfdc-tool-worker-001",
+  "deploymentRequestId": "deploy-req-worker-001",
+  "dataClassification": "CONFIDENTIAL",
+  "expectedRoutedTo": "worker",
+  "expectedLegacyService": "SfdcIntegratorService.deploy"
+}

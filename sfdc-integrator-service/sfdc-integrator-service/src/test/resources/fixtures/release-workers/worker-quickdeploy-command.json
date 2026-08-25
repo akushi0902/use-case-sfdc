@@ -1,0 +1,13 @@
+{
+  "_comment": "Worker dispatch command fixture for QUICK_DEPLOY operation (WO-152)",
+  "operationType": "QUICK_DEPLOY",
+  "correlationId": "corr-quickdeploy-worker-001",
+  "idempotencyKey": "idempotency-quickdeploy-worker-001",
+  "pipelineId": "pipeline-worker-quickdeploy-001",
+  "stepId": "step-worker-quickdeploy-001",
+  "sfdcToolId": "sfdc-tool-worker-003",
+  "deploymentRequestId": "deploy-req-worker-quickdeploy-001",
+  "dataClassification": "CONFIDENTIAL",
+  "expectedRoutedTo": "worker",
+  "expectedLegacyService": "QuickDeployService.start"
+}
