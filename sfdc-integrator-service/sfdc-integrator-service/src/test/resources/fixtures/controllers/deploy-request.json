@@ -1,0 +1,6 @@
+{
+  "_comment": "CHAR-004 — legacy deploy request; synthetic IDs only, no real Salesforce org URL or credentials",
+  "pipelineId": "char-pipeline-003",
+  "stepId": "char-step-003",
+  "orgUrl": "https://synth-org.example.invalid"
+}

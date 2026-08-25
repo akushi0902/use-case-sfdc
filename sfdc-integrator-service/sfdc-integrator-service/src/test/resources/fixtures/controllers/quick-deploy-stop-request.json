@@ -1,0 +1,5 @@
+{
+  "_comment": "CHAR-003 — quick deploy stop request; synthetic IDs only, no tokens or credentials",
+  "pipelineId": "char-pipeline-001",
+  "stepId": "char-step-001"
+}

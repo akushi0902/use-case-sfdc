@@ -1,0 +1,6 @@
+{
+  "_comment": "CHAR-006 — domain queue operation request; synthetic IDs only, no real customer data",
+  "pipelineId": "char-pipeline-005",
+  "stepId": "char-step-005",
+  "domainName": "char-domain-001"
+}
