@@ -217,6 +217,91 @@ All tasks in the table above run automatically when you run `./gradlew check` or
 
 ---
 
+## Database Migrations (Flyway)
+
+This service uses [Flyway](https://flywaydb.org/) for repeatable, version-controlled PostgreSQL schema migrations. Migrations run automatically at application startup before the web layer becomes ready.
+
+### Required Environment Variables (Production / Staging)
+
+| Variable | Purpose |
+|---|---|
+| `DB_URL` | JDBC connection URL — e.g. `jdbc:postgresql://<host>:5432/<dbname>` |
+| `DB_USER` | Database username |
+| `DB_PASSWORD` | Database password |
+
+**Never commit real database URLs, usernames, or passwords to source control.**
+
+If any of these variables are missing at startup, the application fails immediately with a clear configuration error identifying the missing property — no silent fallback to an embedded database.
+
+### Migration Script Location
+
+```
+src/main/resources/db/migration/
+  V1__baseline.sql     ← initial schema foundation (committed, immutable)
+```
+
+Migration scripts follow Flyway's versioned naming convention: `V{version}__{description}.sql`.
+
+### Running Migrations Locally
+
+To run migrations against a local PostgreSQL instance:
+
+```bash
+# Set connection environment variables
+export DB_URL="jdbc:postgresql://localhost:5432/sfdc_integrator"
+export DB_USER="postgres"
+export DB_PASSWORD="<local-password>"
+
+# Start the application — Flyway runs migrations automatically on startup
+./gradlew bootRun
+```
+
+To validate migration status without starting the full application, use the Flyway CLI or the Spring Boot Actuator `/actuator/flyway` endpoint (requires `management.endpoints.web.exposure.include=flyway`).
+
+### Validating Migration Status in CI
+
+The `MigrationFoundationTest` integration test verifies that:
+1. The Spring application context starts with Flyway enabled.
+2. The V1 baseline migration creates the `sfdc_schema_info` table.
+3. Flyway's `flyway_schema_history` records V1 as applied and successful.
+
+```bash
+# Run only migration integration tests
+./gradlew test --tests 'com.opsera.integrator.sfdc.migration.*'
+
+# Run all tests (migration tests included)
+./gradlew test
+```
+
+Migration tests use an H2 in-memory datasource in PostgreSQL compatibility mode — no external database is required in CI.
+
+### Immutability Rule
+
+**Migration scripts are immutable once applied to any environment.** If a migration was already applied, changing its content will cause Flyway to detect a checksum mismatch and fail at startup — this is intentional and prevents silent schema drift.
+
+To fix a mistake in an applied migration:
+1. Do NOT edit the existing script.
+2. Create a new versioned migration (e.g. `V2__fix_<description>.sql`) that makes the corrective change.
+
+### Rollback Policy
+
+Flyway does not support automatic rollback of applied migrations. To roll back:
+
+1. **Restore from backup** — the approved rollback path is restoring the database from a point-in-time backup taken before the migration was applied.
+2. **Write a corrective migration** — for non-destructive changes, write a forward migration that undoes the effect (e.g. `DROP TABLE IF EXISTS`).
+3. **Never reuse a version number** — version numbers are permanent once applied.
+
+### Migration Failure Modes
+
+| Failure | Cause | Resolution |
+|---|---|---|
+| `Could not resolve placeholder 'DB_URL'` | `DB_URL` env var not set | Set the required environment variables before starting |
+| `Checksum mismatch for migration V1` | A committed migration script was edited after being applied | Restore the original script content; write a new migration for the fix |
+| `Flyway has detected resolved migrations that are still pending` | New migration added without running it | Deploy the new version so Flyway applies it |
+| `Unable to obtain connection from datastore` | PostgreSQL unreachable or credentials wrong | Check network policy, `DB_URL`, `DB_USER`, `DB_PASSWORD` |
+
+---
+
 ## Java 21 Toolchain Troubleshooting
 
 | Symptom | Cause | Resolution |

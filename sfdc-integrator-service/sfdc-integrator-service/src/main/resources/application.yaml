@@ -1,3 +1,28 @@
+spring:
+  datasource:
+    # Production datasource: all values from environment variables.
+    # Missing variables cause a clear startup failure — no fallback to embedded databases.
+    # Do NOT commit real URLs, usernames, or passwords here.
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Conservative pool size for a single-instance deployment; tune per environment.
+      maximum-pool-size: 5
+      connection-timeout: 20000
+
+  flyway:
+    enabled: true
+    # All versioned migration scripts live under db/migration.
+    # Scripts are immutable once applied; fixes require a new versioned script.
+    locations: classpath:db/migration
+    # Do NOT set baseline-on-migrate: true in production — it hides checksum mismatches
+    # on databases that already have tables from a prior migration.
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    out-of-order: false
+
 logging:
   pattern:
     # Includes the MDC correlationId field so every log line is traceable to a specific request.

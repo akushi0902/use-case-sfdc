@@ -49,3 +49,10 @@
 - **Files:** 15 (+792/-0)
 - **Duration:** 536ss
 - **Approach:** Created a self-contained v2 release transport model in resources/v2/release with Jakarta Bean Validation (no Spring context required to instantiate or validate). Enums cover operation types and lifecycle states. ReleaseCommandMapper in services/v2 converts legacy DTOs to v2 commands using canonical task ID selection (stepId preferred, fallbackTaskId as fallback). All toString() methods exclude sensitive fields (requestedBy, clientCorrelationId, rejectedValue). No new HTTP endpoints introduced; legacy controllers unchanged.
+
+## WO-108: User Story: WO-108 - Add PostgreSQL Migration Foundation
+- **Status:** completed
+- **Commit:** `7e5a5db`
+- **Files:** 6 (+221/-1)
+- **Duration:** 389ss
+- **Approach:** Added Flyway 10.x + PostgreSQL JDBC as a low-blast-radius platform layer. Production datasource requires DB_URL/DB_USER/DB_PASSWORD env vars — missing any causes a clear startup failure. Tests use H2 in PostgreSQL compatibility mode via the existing 'test' profile; Flyway is disabled by default in that profile so existing @SpringBootTest controller/filter tests are unaffected. MigrationFoundationTest re-enables Flyway via @TestPropertySource to prove migration execution without external infrastructure. No legacy controller behavior was changed.

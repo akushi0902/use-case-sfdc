@@ -87,12 +87,22 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // JDBC datasource support — provides HikariCP connection pool and DataSource autoconfiguration
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 
     // Spring Kafka
     implementation 'org.springframework.kafka:spring-kafka'
 
     // Hazelcast
     implementation 'com.hazelcast:hazelcast-spring'
+
+    // PostgreSQL JDBC driver — runtime only; production datasource target
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // Flyway schema migration framework (Spring Boot BOM manages version — 10.x for Spring Boot 3.4.1)
+    implementation 'org.flywaydb:flyway-core'
+    // Flyway 10 requires a separate artifact for each database vendor
+    implementation 'org.flywaydb:flyway-database-postgresql'
 
     // Salesforce / Opsera internal libraries (resolved from internal package manager)
     // These coordinates must be available in OPSERA_REPO_URL.
@@ -103,6 +113,8 @@ dependencies {
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
+    // H2 in-memory database for isolated test datasource (PostgreSQL compatibility mode)
+    testRuntimeOnly 'com.h2database:h2'
 }
 
 test {
