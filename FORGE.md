@@ -231,3 +231,10 @@
 - **Files:** 16 (+1071/-0)
 - **Duration:** 490ss
 - **Approach:** Created SfdcCodeScanController from scratch with 6 routes under /code-scan prefix. Created 5 model DTOs (ScanRule, ScanCategory, ScanRequest, ScanSummary, QualityGateResult), SfdcCodeScanService interface, and synthetic allRules.json resource with 5 fixture rule definitions. Submit route logs only pipelineId and stepId via SafeLogEvent (repositoryUrl and branch excluded). Cache-miss endpoints return 404 via Optional.map pattern. Created SfdcCodeScanControllerCompatibilityTest.java with 6 @Nested subclasses (CS-001 through CS-006) and 28 test methods locking all HTTP contracts.
+
+## WO-129: User Story: WO-129 - Preserve Post Refresh Apex Contracts
+- **Status:** completed
+- **Commit:** `f1f2835`
+- **Files:** 13 (+830/-6)
+- **Duration:** 399ss
+- **Approach:** Added 4 legacy routes to PostRefreshTaskController (/apex/schedulerclasses, /domainqueue/task/remove, /domainqueue/task/list, /domainmap/clear) delegating to PostRefreshTaskService extended with 4 new methods. Created DomainQueueRequest DTO with pipelineId, stepId, domainName. Created SfdcTestClassController with 2 Apex discovery routes under /apex/testclasses (list and mapping) backed by SfdcTestClassService interface. List/mapping routes return HTTP 200 + empty collection for empty states. Characterization tests cover 5 post-refresh routes (PR-001 to PR-005) and 2 Apex discovery routes (TC-001 to TC-002) with 29 total test methods.

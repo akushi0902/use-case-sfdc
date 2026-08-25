@@ -1,0 +1,5 @@
+{
+  "_comment": "Synthetic Apex scheduler class retrieval request — no real Apex class names, org IDs, or credentials",
+  "pipelineId": "pipeline-fixture-pr-compat-001",
+  "stepId": "step-fixture-scheduler-compat-001"
+}

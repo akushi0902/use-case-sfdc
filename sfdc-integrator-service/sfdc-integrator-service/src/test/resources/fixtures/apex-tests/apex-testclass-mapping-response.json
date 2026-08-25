@@ -1,0 +1,5 @@
+{
+  "_comment": "Synthetic Apex test class mapping fixture — no real Apex class names, org IDs, or customer data",
+  "FixtureApexClass001": ["FixtureApexTestClass001", "FixtureApexTestClass002"],
+  "FixtureApexClass002": ["FixtureApexTestClass003"]
+}

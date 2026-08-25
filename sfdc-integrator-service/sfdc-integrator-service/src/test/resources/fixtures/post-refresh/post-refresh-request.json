@@ -1,0 +1,5 @@
+{
+  "_comment": "Synthetic post-refresh request fixture — no real pipeline IDs, org credentials, or customer data",
+  "pipelineId": "pipeline-fixture-pr-compat-001",
+  "stepId": "step-fixture-pr-compat-001"
+}

@@ -1,0 +1,6 @@
+{
+  "_comment": "Synthetic domain queue request fixture — no real domain names, org IDs, or customer data",
+  "pipelineId": "pipeline-fixture-pr-compat-001",
+  "stepId": "step-fixture-queue-compat-001",
+  "domainName": "domain-fixture-compat-001"
+}
