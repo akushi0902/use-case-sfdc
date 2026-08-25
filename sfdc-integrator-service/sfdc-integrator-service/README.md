@@ -73,6 +73,73 @@ coordinate — not a credentials leak.
 
 ---
 
+---
+
+## Secret Inventory and Classification
+
+All build-time and runtime configuration inputs are classified below. No real credentials may be committed to source control — use the injection mechanisms listed.
+
+### Classification Levels
+
+| Level | Definition |
+|---|---|
+| `NON_SECRET` | Public or semi-public value (e.g. service endpoint URL). May appear in non-sensitive logs. |
+| `CONFIDENTIAL` | Internal reference or metadata. Must not appear in error messages or public-facing responses. |
+| `RESTRICTED` | Credential with direct access capability (password, token, key). Must never appear in any log, CLI output, or error message. |
+
+### Runtime Secret Inventory
+
+| Env Var | Classification | Injection Mechanism | Required For | Notes |
+|---|---|---|---|---|
+| `DB_URL` | NON_SECRET | Kubernetes Secret (env) | API + Worker | Spring fails startup if absent |
+| `DB_USER` | CONFIDENTIAL | Kubernetes Secret (env) | API + Worker | Spring fails startup if absent |
+| `DB_PASSWORD` | **RESTRICTED** | Kubernetes Secret (env) | API + Worker | Must never appear in logs. Spring fails startup if absent. Rotate every 90 days. |
+| `KAFKA_BOOTSTRAP_SERVERS` | NON_SECRET | Kubernetes ConfigMap (env) | API + Worker | `kubernetes` profile only. Spring fails if active and absent. |
+| `OAUTH2_JWK_SET_URI` | NON_SECRET | Kubernetes ConfigMap (env) | API pod | Public JWKS endpoint. Empty default means JWT validation fails silently — always set. |
+| `OAUTH2_ISSUER_URI` | NON_SECRET | Kubernetes ConfigMap (env) | API pod | OIDC discovery alternative to `OAUTH2_JWK_SET_URI`. Use one or the other. |
+| `OAUTH2_EXPECTED_AUDIENCE` | CONFIDENTIAL | Kubernetes ConfigMap (env) | API pod | Validated at startup via `SecretReferenceProperties`. Startup fails if blank or unsafe placeholder. Default: `sfdc-integrator`. |
+| `VAULT_BASE_URL` | NON_SECRET | Kubernetes ConfigMap (env) | Future | Vault integration placeholder. Optional. Validated if set — must not contain unsafe placeholder patterns. |
+
+### Build-Time Secret Inventory
+
+| Env Var | Classification | Injection Mechanism | Required For | Notes |
+|---|---|---|---|---|
+| `OPSERA_REPO_URL` | NON_SECRET | CI/CD secret store | Build only | Internal Maven repo URL. Build skips internal repo block if absent. |
+| `OPSERA_REPO_USER` | CONFIDENTIAL | CI/CD secret store | Build only | Service account username. Filtered from build output. |
+| `OPSERA_REPO_TOKEN` | **RESTRICTED** | CI/CD secret store | Build only | Auth token. Must never appear in build logs. Rotate every 90 days. |
+
+### Secret Ownership and Rotation
+
+| Secret | Owner | Rotation Period | Rotation Process |
+|---|---|---|---|
+| `DB_PASSWORD` | Platform DBA team | 90 days | Update Kubernetes Secret, rolling restart |
+| `OPSERA_REPO_TOKEN` | Platform CI team | 90 days | Rotate in CI secret store, update all pipelines |
+| `OAUTH2_EXPECTED_AUDIENCE` | Platform Security team | On service rename | Update ConfigMap and redeploy |
+
+### Startup Failure Runbook (Missing or Unsafe Secret Reference)
+
+**Symptom:** Application fails to start with a validation error mentioning a configuration property.
+
+**Diagnosis and remediation by error type:**
+
+| Error pattern | Cause | Remediation |
+|---|---|---|
+| `Could not resolve placeholder 'DB_URL'` | `DB_URL` env var not set | Inject `DB_URL` from the Kubernetes Secret in the pod spec |
+| `sfdc.secrets.oauth2-expected-audience must not be blank` | `OAUTH2_EXPECTED_AUDIENCE` is blank or missing | Set `OAUTH2_EXPECTED_AUDIENCE` in the Kubernetes ConfigMap and redeploy |
+| `Configuration value appears to contain an unsafe sample placeholder` | A fixture `.env.example` value was used as real config | Replace the placeholder with the actual endpoint URL or secret reference |
+| `Unable to obtain connection from datastore` | PostgreSQL unreachable or DB_PASSWORD wrong | Verify network policy, `DB_URL`, `DB_USER`, `DB_PASSWORD` in Kubernetes Secrets |
+
+**General steps:**
+1. Check pod logs: `kubectl logs -l app=sfdc-integrator-service -n <namespace> --tail=50`
+2. The error message names the missing or invalid property — not the value.
+3. Verify the Kubernetes Secret or ConfigMap contains the required key: `kubectl get secret <name> -n <namespace> -o jsonpath='{.data}' | tr ',' '\n'`
+4. Verify the pod spec mounts the key as an env var: `kubectl describe pod <pod-name> -n <namespace>`
+5. After correcting the Secret/ConfigMap, trigger a rolling restart: `kubectl rollout restart deployment/sfdc-integrator-service -n <namespace>`
+
+**Never print the value in a bug report or Slack message** — report only the variable name and the environment.
+
+---
+
 ## Building the Service
 
 ```bash

@@ -34,6 +34,20 @@ spring:
     out-of-order: false
 
 sfdc:
+  secrets:
+    # Vault service base URL for future managed secret integration.
+    # Classification: NON-SECRET endpoint reference (the URL itself is not a secret).
+    # Injection: VAULT_BASE_URL environment variable (Kubernetes ConfigMap).
+    # Required: Optional. If set, must not contain an unsafe sample placeholder.
+    # Owner: Platform Security team. Rotation: not applicable (endpoint reference).
+    vault-base-url: ${VAULT_BASE_URL:}
+    # Expected OAuth2 audience claim for JWT token validation.
+    # Classification: CONFIDENTIAL metadata (identifies this service's identity namespace).
+    # Injection: OAUTH2_EXPECTED_AUDIENCE environment variable (Kubernetes ConfigMap).
+    # Required: API pod — must not be blank. Startup fails fast if blank or unsafe placeholder.
+    # Owner: Platform Security team. Rotation: when service name changes.
+    oauth2-expected-audience: ${OAUTH2_EXPECTED_AUDIENCE:sfdc-integrator}
+
   security:
     # Set to false only in test profiles. Must be true in all CI and production environments.
     # When false, the JWT security filter chain is not registered; disable only via
@@ -41,6 +55,7 @@ sfdc:
     enabled: true
     # Expected JWT audience claim value. Tokens whose aud claim does not include this value
     # are rejected before controller execution. Set via OAUTH2_EXPECTED_AUDIENCE in production.
+    # Also validated by sfdc.secrets.oauth2-expected-audience — must not be blank or unsafe.
     expected-audience: ${OAUTH2_EXPECTED_AUDIENCE:sfdc-integrator}
 
   audit:
