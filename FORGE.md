@@ -154,3 +154,10 @@
 - **Files:** 0 (+0/-0)
 - **Duration:** 181ss
 - **Approach:** WO-060 (Enable Gradle Dependency Verification) was implemented as part of WO-118 (Harden Java Runtime Build), which was processed earlier in this batch. WO-118 added the full dependency locking and verification metadata infrastructure to build.gradle and committed the required per-configuration lock files and verification-metadata.xml skeleton. No additional code changes are required for WO-060. This summary documents the verification against all 7 acceptance criteria using the artifacts committed in WO-118.
+
+## WO-121: User Story: WO-121 - Validate Quick Deploy Requests
+- **Status:** completed
+- **Commit:** `aab96c2`
+- **Files:** 6 (+242/-0)
+- **Duration:** 337ss
+- **Approach:** WO-121 (Validate Quick Deploy Requests) builds on validation enforcement already added in WO-114 (which added @NotBlank to QuickDeployRequest.deploymentRequestId and @Valid to JobExecutionController.startQuickDeploy). The controller and DTO required no production code changes — the validation contract was already complete. This WO delivers a dedicated Spring MVC test class (JobExecutionControllerQuickDeployValidationTest) that groups all seven WO-121 acceptance criteria scenarios in one place, plus a new fixtures/quickdeploy-validation/ directory with five scenario fixtures. The fallbackTaskId canonicalization (the current codebase equivalent of the WO-121 'taskId/gitTaskId' normalization) is tested with ArgumentCaptor: fallbackTaskId is preserved when present, normalized to empty string when absent, and the service is verified to be called exactly once for valid requests.
