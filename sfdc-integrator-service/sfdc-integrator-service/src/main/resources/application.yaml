@@ -1,0 +1,8 @@
+logging:
+  pattern:
+    # Includes the MDC correlationId field so every log line is traceable to a specific request.
+    # Falls back to 'none' when the filter has not populated MDC (e.g. background threads).
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [cid=%X{correlationId:-none}] - %msg%n"
+  level:
+    root: INFO
+    com.opsera.integrator.sfdc: DEBUG
