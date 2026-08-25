@@ -1,0 +1,355 @@
+# SFDC Integrator Service — Release Workflow Alert Definitions
+#
+# Source of truth: ops/slo/release-workflow-guardrails.yaml
+# Do NOT duplicate threshold values here — reference the guardrail IDs instead.
+#
+# Safe alert annotation rules:
+#   - Annotations must NOT include: customer IDs, Salesforce org IDs, job IDs,
+#     credentials, bearer tokens, request payloads, or correlation IDs from
+#     specific incidents. These belong in post-mortem documents, not alert rules.
+#   - Summary and description fields use only bounded label values
+#     (operation, outcome, exception_category, routeVersion, environment).
+#   - Runbook links reference internal documentation paths, never production
+#     endpoints or credentials.
+#
+# Environment parameterization:
+#   - All alerts use the {{$environment}} variable for environment routing.
+#   - Alert routing and notification channels are configured in the alerting
+#     platform (PagerDuty, OpsGenie, etc.) — not in this file.
+#   - Never hard-code production-only receiver names in this file.
+#
+# Status field:
+#   active  — metric is emitted; alert is ready to enable
+#   pending — metric not yet emitted; alert must be disabled until metric ships
+
+version: "1.0"
+service: sfdc-integrator-service
+sloRef: "ops/slo/release-workflow-guardrails.yaml"
+
+groups:
+
+  # ── Acceptance Layer Latency (SLO-01) ────────────────────────────────────
+
+  - name: sfdc.release.acceptance.latency
+    rules:
+
+      - alert: SfcdReleaseAcceptanceLatencyP95Breach
+        guardrailRef: slo-01-api-acceptance-latency-p95
+        status: active
+        expr: >
+          histogram_quantile(0.95,
+            sum by(le, uri) (
+              rate(http_server_requests_seconds_bucket{
+                application="sfdc-integrator-service",
+                uri=~"/quickdeploy|/deploy|/validate|/api/v2/sfdc/release-jobs",
+                outcome="SUCCESS"
+              }[5m])
+            )
+          ) > 2.0
+        for: 5m
+        severity: critical
+        annotations:
+          summary: "Release API p95 acceptance latency exceeds SLO-01 threshold (2000 ms)"
+          description: >
+            The p95 acceptance latency for release workflow routes (quick-deploy, deploy, validate)
+            has exceeded 2 000 ms for more than 5 minutes. This breaches SLO-01.
+            Check: Spring MVC thread pool saturation, database connection pool exhaustion,
+            downstream Kafka producer backpressure, or recent deployment changes.
+          triage: >
+            1. Check /actuator/health for degraded dependencies (db, kafkaConnectivity).
+            2. Review JVM GC pause metrics for memory pressure.
+            3. Check recent deployment events — latency regression often follows a new release.
+          runbook: "docs/operations/runbooks/slo-01-acceptance-latency.md"
+          owner: "sre-release-ops"
+          incidentGuidance: >
+            Do NOT paste raw request payloads or customer identifiers into incident tickets.
+            Use only: operation label, uri label, environment, and timestamp.
+
+  # ── Server-Side Error Rate (SLO-05) ──────────────────────────────────────
+
+  - name: sfdc.release.error.rate
+    rules:
+
+      - alert: SfdcReleaseWorkflowServerErrorRateBreach
+        guardrailRef: slo-05-server-error-rate
+        status: active
+        expr: >
+          100 * (
+            rate(http_server_requests_seconds_count{
+              application="sfdc-integrator-service",
+              uri=~"/quickdeploy|/deploy|/validate|/api/v2/sfdc/release-jobs",
+              outcome="SERVER_ERROR"
+            }[5m])
+          ) /
+          rate(http_server_requests_seconds_count{
+            application="sfdc-integrator-service",
+            uri=~"/quickdeploy|/deploy|/validate|/api/v2/sfdc/release-jobs"
+          }[5m]) > 1
+        for: 5m
+        severity: critical
+        annotations:
+          summary: "Release workflow server-side error rate exceeds SLO-05 threshold (1%)"
+          description: >
+            The 5xx error rate on release workflow routes has exceeded 1% for more than 5 minutes.
+            This breaches SLO-05. Freeze deployments until rate drops below 0.5% for two
+            consecutive 5-minute windows.
+          triage: >
+            1. Check /actuator/health for dependency degradation.
+            2. Review exception_category label on sfdc.release.dispatch.failures for failure type.
+            3. Increase logging verbosity on SafeStructuredLogger (INFO → DEBUG) to see safe
+               structured fields (operation, outcome) — never log raw request payloads.
+            4. Roll back the most recent deployment if error rate onset correlates with the
+               release timestamp.
+          runbook: "docs/operations/runbooks/slo-05-error-rate.md"
+          owner: "sre-release-ops"
+          burnRateNote: >
+            At 14.4x burn rate (sustained ~14.4% error rate for 1 hour), the 24-hour error
+            budget is exhausted in 2 hours. PagerDuty escalation fires at this multiplier.
+          incidentGuidance: >
+            Use operation and outcome labels for triage. Do NOT attach raw request bodies,
+            stack traces containing Salesforce payloads, or customer identifiers to tickets.
+
+      - alert: SfdcReleaseDispatchFailureSpike
+        status: active
+        expr: >
+          rate(sfdc_release_dispatch_failures_total{
+            application="sfdc-integrator-service"
+          }[5m]) > 0.1
+        for: 5m
+        severity: warning
+        annotations:
+          summary: "Repeated release dispatch failures detected (> 0.1/s over 5 minutes)"
+          description: >
+            The release dispatch failure rate has exceeded 0.1 per second for 5 minutes.
+            This may indicate repeated worker adapter failures or downstream infrastructure
+            degradation. Check the exception_category label for failure categorization.
+          triage: >
+            1. Check exception_category label: validation → request contract change;
+               authorization → scope or JWT configuration; dispatch → worker or Kafka issue;
+               unknown → unexpected exception, check service logs.
+            2. Check /actuator/health/readiness for jobDispatchReadiness indicator.
+            3. If exception_category=dispatch, check worker pod scheduling and Kafka topic health.
+          runbook: "docs/operations/runbooks/dispatch-failure.md"
+          owner: "sre-release-ops"
+
+  # ── Stale Checkpoint Freshness (SLO-04) ──────────────────────────────────
+
+  - name: sfdc.release.checkpoint.freshness
+    rules:
+
+      - alert: SfdcActiveJobCheckpointStale
+        guardrailRef: slo-04-checkpoint-freshness
+        status: pending
+        statusReason: >
+          Checkpoint persistence not yet implemented. Enable this alert when Kafka
+          checkpoint listener and durable persistence are operational.
+        expr: >
+          # PENDING: max(time() - sfdc_job_checkpoint_timestamp_seconds{
+          #   application="sfdc-integrator-service"
+          # }) > 60
+          # Replace with real expression when metric is emitted.
+          vector(0) > 1
+        for: 1m
+        severity: critical
+        annotations:
+          summary: "Active job checkpoint is stale beyond SLO-04 threshold (60 s)"
+          description: >
+            One or more actively-running release jobs have not emitted a checkpoint for
+            more than 60 seconds. This breaches SLO-04 and may indicate a stalled or
+            orphaned worker pod.
+          triage: >
+            1. Check Kafka consumer lag on sfdc-job-checkpoints topic.
+            2. If lag is growing → page Kafka SRE.
+            3. If lag stable but checkpoints stale → inspect Kubernetes worker pod status
+               for the affected job. Use internal job reference only — do not log org IDs.
+            4. If no worker activity for > 5 minutes → treat job as orphaned;
+               initiate checkpoint recovery procedure.
+          runbook: "docs/operations/runbooks/slo-04-checkpoint-freshness.md"
+          owner: "sre-release-ops"
+
+      - alert: SfdcKafkaCheckpointConsumerLagHigh
+        status: active
+        expr: >
+          kafka_consumer_group_lag{
+            topic="sfdc-job-checkpoints",
+            application="sfdc-integrator-service"
+          } > 1000
+        for: 5m
+        severity: warning
+        annotations:
+          summary: "Kafka checkpoint consumer lag exceeds 1000 messages"
+          description: >
+            The Kafka consumer group consuming from the sfdc-job-checkpoints topic has
+            accumulated more than 1000 unprocessed messages for more than 5 minutes.
+            This is a proxy signal for checkpoint staleness until SLO-04 metric is active.
+          triage: >
+            1. Check Kafka broker health and sfdc-job-checkpoints topic partition health.
+            2. Check sfdc-integrator-service KafkaCheckpointListener logs for deserialization
+               or persistence errors (safe fields only: topic, partition, offset).
+            3. If consumer is paused or restarting repeatedly, check JVM heap pressure.
+          runbook: "docs/operations/runbooks/kafka-consumer-lag.md"
+          owner: "sre-release-ops"
+
+  # ── Dependency Health (SLO linked: SLO-01, SLO-05) ───────────────────────
+
+  - name: sfdc.release.dependency.health
+    rules:
+
+      - alert: SfdcKafkaConnectivityDown
+        status: active
+        expr: >
+          spring_boot_health_status{
+            application="sfdc-integrator-service",
+            name="kafkaConnectivity"
+          } == 0
+        for: 2m
+        severity: critical
+        annotations:
+          summary: "Kafka connectivity health indicator reports DOWN"
+          description: >
+            The kafkaConnectivity Spring Boot health indicator has reported DOWN for more
+            than 2 minutes. Release jobs accepted while Kafka is unavailable may fail to
+            dispatch; checkpoint events will not be published.
+          triage: >
+            1. Check Kafka broker health in the infrastructure layer.
+            2. Check spring.kafka.bootstrap-servers configuration for this environment.
+            3. Review sfdc-integrator-service logs for Kafka producer/consumer errors.
+               Look for safe fields: topic name, error type (not payloads).
+            4. If Kafka is confirmed DOWN → activate checkpoint recovery procedure.
+          runbook: "docs/operations/runbooks/kafka-connectivity-down.md"
+          owner: "sre-release-ops"
+
+      - alert: SfdcHazelcastClusterDown
+        status: active
+        expr: >
+          spring_boot_health_status{
+            application="sfdc-integrator-service",
+            name="hazelcastCluster"
+          } == 0
+        for: 2m
+        severity: critical
+        annotations:
+          summary: "Hazelcast cluster health indicator reports DOWN"
+          description: >
+            The hazelcastCluster health indicator reports DOWN. Status lookups will fall
+            through to PostgreSQL — monitor SLO-02 latency for budget impact.
+            New release acceptance is unaffected; in-progress status queries may degrade.
+          triage: >
+            1. Check Hazelcast cluster member count and network connectivity.
+            2. Monitor SLO-02 p95 status-lookup latency (if status route is active).
+            3. Check JVM heap metrics — Hazelcast eviction may indicate memory pressure.
+          runbook: "docs/operations/runbooks/hazelcast-cluster-down.md"
+          owner: "sre-release-ops"
+
+      - alert: SfdcJobDispatchReadinessUnknown
+        status: active
+        expr: >
+          spring_boot_health_status{
+            application="sfdc-integrator-service",
+            name="jobDispatchReadiness"
+          } == 2
+        for: 5m
+        severity: warning
+        annotations:
+          summary: "Job dispatch readiness indicator is UNKNOWN for more than 5 minutes"
+          description: >
+            The jobDispatchReadiness health indicator has reported UNKNOWN for 5 minutes.
+            This typically means worker dispatch is configured enabled but no command types
+            are registered. Release acceptance still works via legacy path.
+          triage: >
+            1. Check sfdc.worker-dispatch.enabled and sfdc.worker-dispatch.command-types
+               configuration for this environment (sfdc-integrator-service ConfigMap).
+            2. If worker dispatch is intentionally disabled, set enabled=false to return
+               the indicator to UP (legacy-only mode).
+          runbook: "docs/operations/runbooks/dispatch-readiness-unknown.md"
+          owner: "sre-release-ops"
+
+      - alert: SfdcKubernetesReadinessProbeDown
+        status: active
+        expr: >
+          spring_boot_readiness_state{
+            application="sfdc-integrator-service"
+          } == 0
+        for: 1m
+        severity: critical
+        annotations:
+          summary: "Kubernetes readiness probe is refusing traffic"
+          description: >
+            The /actuator/health/readiness probe is reporting NOT READY. Kubernetes will
+            stop routing new requests to this pod. Check the readiness health group:
+            db, kafkaConnectivity, hazelcastCluster, jobDispatchReadiness.
+          triage: >
+            1. GET /actuator/health/readiness for component-level detail.
+            2. Identify the first DOWN/UNKNOWN component.
+            3. Follow the corresponding dependency alert runbook.
+          runbook: "docs/operations/runbooks/readiness-probe-down.md"
+          owner: "sre-release-ops"
+
+  # ── Sensitive-Data Logging (SLO-07) ──────────────────────────────────────
+
+  - name: sfdc.release.log.safety
+    rules:
+
+      - alert: SfdcSensitiveDataLogPatternDetected
+        guardrailRef: slo-07-sensitive-data-logging-triage
+        status: active
+        expr: >
+          increase(log_pattern_matches_total{
+            application="sfdc-integrator-service",
+            pattern=~"sfdc_sensitive_data_.*"
+          }[5m]) > 0
+        for: 0m
+        severity: critical
+        annotations:
+          summary: "Sensitive data log pattern detected in sfdc-integrator-service"
+          description: >
+            A log scanning rule matched a potentially sensitive pattern in sfdc-integrator-service
+            logs. This may indicate raw request payloads, credential fragments, customer
+            identifiers, or authorization header values appearing in log output.
+            SLO-07 requires triage within 30 minutes of this alert firing.
+          triage: >
+            1. Immediately check whether the log event is accessible to downstream log
+               sinks (SIEM, archive). If yes, initiate log scrub procedure.
+            2. Identify the log emitter — check structured log fields (operation, controller)
+               not raw content.
+            3. If confirmed sensitive data: open P0 incident; notify security team.
+            4. Post-mortem required within 3 business days.
+          runbook: "docs/operations/runbooks/slo-07-sensitive-data-logging.md"
+          owner: "security-sre"
+          incidentGuidance: >
+            Do NOT paste log lines containing sensitive data into incident management
+            platforms, Slack, or email. Reference only: timestamp, service name, log
+            pattern identifier, and alert firing time.
+
+  # ── Final-Status Coverage (SLO-03 — Pending) ─────────────────────────────
+
+  - name: sfdc.release.final.status
+    rules:
+
+      - alert: SfdcJobFinalStatusCoverageBelow99Percent
+        guardrailRef: slo-03-final-status-coverage
+        status: pending
+        statusReason: >
+          Durable lifecycle persistence not yet implemented. Enable when PostgreSQL
+          job lifecycle model is operational and sfdc_job_terminal_count metric is emitted.
+        expr: >
+          # PENDING: 100 * sfdc_job_terminal_count / sfdc_job_accepted_count < 99
+          vector(0) > 1
+        for: 5m
+        severity: critical
+        annotations:
+          summary: "Release job final-status coverage has fallen below SLO-03 target (99%)"
+          description: >
+            Fewer than 99% of accepted release jobs reached a terminal state (SUCCEEDED,
+            FAILED, CANCELLED) within the 1-hour cohort window. Uncovered jobs may be
+            orphaned or stalled.
+          triage: >
+            1. Query PostgreSQL lifecycle table for uncovered jobs (accepted with no terminal
+               record). Use internal job references only — do not expose customer or org IDs
+               in incident tickets.
+            2. Check if uncovered jobs share a common operation type or dispatch path.
+            3. Check Kafka consumer lag — uncovered jobs during a Kafka outage may need
+               checkpoint recovery.
+            4. Escalate to release engineering if uncovered rate exceeds 2%.
+          runbook: "docs/operations/runbooks/slo-03-final-status-coverage.md"
+          owner: "sre-release-ops"
