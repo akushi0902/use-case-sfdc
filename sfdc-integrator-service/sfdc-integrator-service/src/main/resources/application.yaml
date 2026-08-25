@@ -23,6 +23,29 @@ spring:
     validate-on-migrate: true
     out-of-order: false
 
+sfdc:
+  governance:
+    classification:
+      # Maps each GovernanceDataCategory to a DataClassification tier.
+      # Unknown or unconfigured categories fail closed to CONFIDENTIAL.
+      # Values: PUBLIC | INTERNAL | CONFIDENTIAL | RESTRICTED
+      category-mappings:
+        JOB_METADATA: CONFIDENTIAL
+        LIFECYCLE_CHECKPOINT: CONFIDENTIAL
+        SFDC_ARTIFACT: RESTRICTED
+        OPERATIONAL_LOG: INTERNAL
+        AUDIT_CONTEXT: CONFIDENTIAL
+        CACHE_ENTRY: INTERNAL
+      # Maps each GovernanceDataCategory to a RetentionCategoryHint.
+      # Values: SHORT_TERM | STANDARD | EXTENDED | AUDIT_MANDATED
+      retention-hints:
+        JOB_METADATA: STANDARD
+        LIFECYCLE_CHECKPOINT: STANDARD
+        SFDC_ARTIFACT: EXTENDED
+        OPERATIONAL_LOG: SHORT_TERM
+        AUDIT_CONTEXT: EXTENDED
+        CACHE_ENTRY: SHORT_TERM
+
 logging:
   pattern:
     # Includes the MDC correlationId field so every log line is traceable to a specific request.

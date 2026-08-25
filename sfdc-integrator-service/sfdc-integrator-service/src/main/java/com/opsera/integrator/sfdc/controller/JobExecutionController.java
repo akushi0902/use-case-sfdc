@@ -1,5 +1,8 @@
 package com.opsera.integrator.sfdc.controller;
 
+import com.opsera.integrator.sfdc.governance.classification.ClassificationContext;
+import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
+import com.opsera.integrator.sfdc.governance.classification.GovernanceDataCategory;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
@@ -37,9 +40,12 @@ public class JobExecutionController {
     static final String ERR_MISSING_DEPLOYMENT_ID = "deploymentRequestId is required";
 
     private final QuickDeployService quickDeployService;
+    private final ClassificationPolicyResolver classificationResolver;
 
-    public JobExecutionController(QuickDeployService quickDeployService) {
+    public JobExecutionController(QuickDeployService quickDeployService,
+                                   ClassificationPolicyResolver classificationResolver) {
         this.quickDeployService = quickDeployService;
+        this.classificationResolver = classificationResolver;
     }
 
     /**
@@ -50,7 +56,12 @@ public class JobExecutionController {
      */
     @PostMapping
     public ResponseEntity<String> startQuickDeploy(@RequestBody QuickDeployRequest request) {
-        log.debug("Quick deploy start received for pipeline={}", request.getPipelineId());
+        ClassificationContext ctx = classificationResolver.resolve(
+                GovernanceDataCategory.JOB_METADATA, "quick-deploy-start");
+        if (ctx != null) {
+            log.debug("Quick deploy start received: operation={}, classification={}",
+                    ctx.getOperationName(), ctx.getClassification());
+        }
 
         if (request.getDeploymentRequestId() == null
                 || request.getDeploymentRequestId().isBlank()) {
@@ -72,7 +83,12 @@ public class JobExecutionController {
      */
     @PostMapping("/stop")
     public ResponseEntity<String> stopQuickDeploy(@RequestBody QuickDeployStopRequest request) {
-        log.debug("Quick deploy stop received for pipeline={}", request.getPipelineId());
+        ClassificationContext ctx = classificationResolver.resolve(
+                GovernanceDataCategory.JOB_METADATA, "quick-deploy-stop");
+        if (ctx != null) {
+            log.debug("Quick deploy stop received: operation={}, classification={}",
+                    ctx.getOperationName(), ctx.getClassification());
+        }
         quickDeployService.stop(request);
         return ResponseEntity.ok(SUCCESS);
     }

@@ -2,6 +2,7 @@ package com.opsera.integrator.sfdc.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
+import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
 import com.opsera.integrator.sfdc.model.QuickDeployRequest;
 import com.opsera.integrator.sfdc.model.QuickDeployStopRequest;
 import com.opsera.integrator.sfdc.service.QuickDeployService;
@@ -42,6 +43,9 @@ class JobExecutionControllerTest {
 
     @MockBean
     private QuickDeployService quickDeployService;
+
+    @MockBean
+    private ClassificationPolicyResolver classificationPolicyResolver;
 
     // ---- LEGACY-001: POST /quickdeploy — start ----
 

@@ -2,6 +2,7 @@ package com.opsera.integrator.sfdc.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opsera.integrator.sfdc.exceptions.SfdcExceptionHandler;
+import com.opsera.integrator.sfdc.governance.classification.ClassificationPolicyResolver;
 import com.opsera.integrator.sfdc.model.DeployRequest;
 import com.opsera.integrator.sfdc.service.SfdcIntegratorService;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,9 @@ class SfdcIntegratorControllerTest {
 
     @MockBean
     private SfdcIntegratorService sfdcIntegratorService;
+
+    @MockBean
+    private ClassificationPolicyResolver classificationPolicyResolver;
 
     // ---- LEGACY-003: POST /deploy ----
 
